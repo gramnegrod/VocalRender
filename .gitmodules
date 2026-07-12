@@ -1,0 +1,4 @@
+[submodule "nanovllm-voxcpm"]
+	path = nanovllm-voxcpm
+	url = https://github.com/pymaster17/nanovllm-voxcpm.git
+	branch = voxcpm-integration

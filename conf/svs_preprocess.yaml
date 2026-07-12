@@ -1,0 +1,88 @@
+# VocalRender SVS data-preprocessing configuration
+# ----------------------------------------------------------------
+# Offline preprocessing: decodes audio, encodes it with VoxCPM2's
+# AudioVAE V2 (16 kHz input, asymmetric encoder/decoder), and writes
+# Arrow shards consumed by scripts/train_vocalrender_svs.py.
+#
+# Usage:
+#   python scripts/preprocess_svs_data.py conf/svs_preprocess.yaml
+
+# ================================================================
+# Datasets
+# ================================================================
+# Two loader types are supported:
+#
+# 1. json_file — a label JSON mapping item_name -> annotation:
+#      {
+#        "2001000001": {
+#          "word":       ["AP", "感", "受", ..., "SP"],   # lyric per word slot (AP/SP = breath/silence)
+#          "word_dur":   [0.14, 0.31, ...],               # seconds, aligned with `word`
+#          "pitch":      [0, 62, 62, 60, ...],            # MIDI pitch per note segment (0 = rest)
+#          "note":       ["<NOTE_8>", "<NOTE_DOT_16>", ...],  # note-duration token per segment
+#          "pitch_dur":  [0.14, 0.31, ...],               # seconds per note segment
+#          "pitch2word": [0, 1, 1, 2, ...],               # note segment -> word index
+#          "bpm":        90
+#        },
+#        ...
+#      }
+#    Audio is read from <audio_root>/<item_name>.wav (or .mp3/.flac/.opus).
+#    song_id_indices / song_id_slice / song_id_separator derive a song_name
+#    from item_name so that train/val prompt clips stay within one song.
+#
+# 2. folder_based — one folder per song, each containing segment audio
+#    files plus a metadata.json aggregating the same annotation fields.
+
+datasets:
+  - name: opencpop
+    type: json_file
+    json_path: data/labels/opencpop.json
+    audio_root: data/audio/Opencpop
+    song_id_slice: [0, 4]
+
+  # - name: m4singer
+  #   type: json_file
+  #   json_path: data/labels/m4singer.json
+  #   audio_root: data/audio/m4singer
+  #   song_id_indices: [0, 1]
+
+  # - name: my_folder_dataset
+  #   type: folder_based
+  #   dataset_root: data/audio/my_folder_dataset
+
+# Pre-trained model path (VoxCPM2, for AudioVAE V2 and tokenizer)
+pretrained_path: pretrained_models/VoxCPM2
+
+# Output directory for preprocessed Arrow shards. Prefer fast local disk;
+# a run that both reads audio and writes Arrow over NFS becomes I/O-bound.
+output_dir: data/preprocessed
+
+# Maximum number of samples to process (-1 for all)
+max_samples: -1
+
+# Target audio sample rate for VAE encoding (MUST be 16000 for VoxCPM2;
+# the decoder outputs 48000 Hz at training/inference time).
+sample_rate: 16000
+
+# Device for VAE encoding
+device: cuda
+
+# Number of parallel workers for data loading (audio decode + resample).
+# In multi-GPU mode this is split per rank (num_workers // num_gpus).
+num_workers: 32
+
+# Number of samples per Arrow shard
+shard_size: 50000
+
+# Max samples per VAE encode batch
+vae_batch_size: 32
+
+# Max total waveform samples per VAE batch (~100 s of 16 kHz audio)
+vae_max_tokens: 1600000
+
+# Number of GPUs for parallel VAE encoding (-1 = all visible)
+num_gpus: -1
+
+# Multi-GPU dispatch is dynamic: the parent feeds duration-homogeneous chunks
+# of this many samples into a shared work queue and each GPU pulls chunks on
+# demand. Smaller = finer load-balancing but more queue traffic.
+dispatch_chunk_size: 2000

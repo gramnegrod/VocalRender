@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Model assets & data (download / generate locally)
+pretrained_models/
+checkpoints/
+data/
+output/
+outputs/
+log/
+logs/
+runs/
+
+# Audio artifacts
+*.wav
+*.flac
+*.mp3
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store

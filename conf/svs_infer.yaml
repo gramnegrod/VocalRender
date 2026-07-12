@@ -1,0 +1,88 @@
+# VocalRender SVS batch-inference configuration
+# ----------------------------------------------
+# Usage:
+#   python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
+
+# ================================================================
+# Model Configuration
+# ================================================================
+
+# Training checkpoint directory (contains config.json + model weights;
+# a `latest` symlink inside it is followed automatically).
+ckpt_dir: checkpoints/svs_v2/latest
+
+# ================================================================
+# Data Configuration
+# ================================================================
+
+# Output directory of scripts/preprocess_svs_data.py (Arrow shards).
+preprocessed_data_path: data/preprocessed
+
+val_datasets: ["opencpop"]
+
+# ================================================================
+# Inference Parameters
+# ================================================================
+
+num_samples: 100
+cfg_value: 2.0
+inference_timesteps: 10
+
+# Maximum generation length (latent frames).
+max_len: 200
+
+# ================================================================
+# Batch Inference Configuration
+# ================================================================
+
+use_batch_inference: true
+use_prompt_audio: true
+prompt_max_frames: 50
+save_audio_max: 100
+
+batch_size: 8
+
+# ================================================================
+# Output Configuration
+# ================================================================
+
+output_dir: output/vocalrender
+save_audio: true
+save_reference: true
+save_score: true
+
+# ================================================================
+# Inference Backend (see docs/inference_backends.md)
+# ================================================================
+# Leave unset to use the in-process multi_gpu path (the default — it's the
+# only backend that supports ``use_prompt_audio`` and ``save_score``).
+#
+# To accelerate metric-only runs (``use_prompt_audio: false``, no score
+# rendering) with nano-vllm's continuous batching, uncomment:
+#
+# inference_backend:
+#   type: nano_vllm
+#   devices: auto          # or [0, 1, ...] / "cuda:3"
+#   max_num_seqs: 32
+#   max_num_batched_tokens: 8192
+#   max_model_len: 4096
+#   gpu_memory_utilization: 0.90
+#   concurrency_multiplier: 2
+#   load_audio_vae: true   # required whenever metrics need generated audio
+#   inference_timesteps: 10
+
+# ================================================================
+# Evaluation Metrics
+# ================================================================
+
+eval_metrics:
+
+  singmos:
+    enabled: true
+    model: singmos_pro
+    local_model_path: ""
+
+  aes:
+    enabled: true
+    axes: ["CE", "PQ"]
+    local_ckpt: ""
