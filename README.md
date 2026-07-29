@@ -1,5 +1,7 @@
 # VocalRender
 
+**English** | [简体中文](README.zh-CN.md)
+
 **VocalRender** is a singing voice synthesis (SVS) system built on top of
 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM). It adapts VoxCPM's
 tokenizer-free TTS architecture to singing by replacing the plain-text prompt
