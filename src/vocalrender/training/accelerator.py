@@ -38,7 +38,7 @@ class Accelerator:
     ``CUDA_VISIBLE_DEVICES`` in the job submission script so that
     NVLink peers are listed consecutively, e.g.:
 
-        # node03: NVLink pairs are (GPU4,GPU5) and (GPU6,GPU7)
+        # If NVLink pairs are (GPU4,GPU5) and (GPU6,GPU7):
         export CUDA_VISIBLE_DEVICES=4,5,6,7   # → groups {4,5} and {6,7}  ✓
         # NOT: 4,6,5,7                         # → groups {4,6} and {5,7}  ✗
     """
@@ -80,9 +80,9 @@ class Accelerator:
             import datetime
             # Bind the PG explicitly to this rank's GPU. Without device_id NCCL
             # "guesses device based on global rank" (PG-default-device warning)
-            # and can deadlock during bring-up — observed as a 2-GPU hang on
-            # node02 where ranks spun at 100% util / pre-model VRAM. Passing
-            # device_id makes init eager + device-correct.
+            # and can deadlock during bring-up — observed as a 2-GPU hang where
+            # ranks spun at 100% util / pre-model VRAM. Passing device_id makes
+            # init eager + device-correct.
             init_kwargs = dict(
                 backend="nccl", init_method="env://",
                 timeout=datetime.timedelta(hours=1),
