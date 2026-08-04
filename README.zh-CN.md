@@ -4,6 +4,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2607.27768-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2607.27768)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-VocalRender-FFD21E?logo=huggingface)](https://huggingface.co/pymaster/VocalRender)
+[![音频演示](https://img.shields.io/badge/Audio-Demo-183d32.svg)](https://pymaster17.github.io/VocalRender/)
 
 **VocalRender** 是一个面向真实作曲流程的乐谱原生歌声合成(SVS)系统。它通过
 原创的歌词—音符交错表示、连续声学 latent 与自回归扩散建模,直接将作曲者使用的

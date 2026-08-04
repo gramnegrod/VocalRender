@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Audio demos for VocalRender, a score-native singing voice synthesis system."
+    />
+    <meta name="theme-color" content="#f4efe5" />
+    <title>VocalRender — Audio Demo</title>
+    <link rel="icon" href="assets/site/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/site/styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="wordmark" href="#top" aria-label="VocalRender home">
+        <span class="wordmark-mark" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+        <span>VocalRender</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#demos">Demos</a>
+        <a href="#method">Method</a>
+        <a href="#citation">Citation</a>
+      </nav>
+      <a
+        class="header-link"
+        href="https://github.com/pymaster17/VocalRender"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub <span aria-hidden="true">↗</span>
+      </a>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-copy">
+          <div class="eyebrow"><span></span> Score-native singing voice synthesis</div>
+          <h1>Music scores,<br /><em>rendered alive.</em></h1>
+          <p class="hero-lead">
+            VocalRender turns composer-oriented symbolic scores—lyrics, notes,
+            pitches, and tempo—directly into expressive 48 kHz singing audio.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#demos">
+              <span class="button-disc" aria-hidden="true">▶</span>
+              Listen to demos
+            </a>
+            <a
+              class="text-link"
+              href="https://arxiv.org/abs/2607.27768"
+              target="_blank"
+              rel="noreferrer"
+            >Paper <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="Abstract visualization of a score becoming a waveform">
+          <div class="visual-label visual-label-top">SCORE / 064 BPM</div>
+          <div class="score-lines" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="notes" aria-hidden="true">
+            <i style="--x: 7%; --y: 49%"></i>
+            <i style="--x: 20%; --y: 40%"></i>
+            <i style="--x: 32%; --y: 58%"></i>
+            <i style="--x: 44%; --y: 31%"></i>
+          </div>
+          <div class="render-line" aria-hidden="true"><span></span></div>
+          <div class="wave-bars" aria-hidden="true"></div>
+          <div class="visual-label visual-label-bottom">AUDIO / 48 KHZ</div>
+          <div class="visual-meta">LYRIC · PITCH · NOTE · TEMPO</div>
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="Key features">
+        <div>
+          <span>Score native</span><b>✦</b><span>Zero-shot timbre</span><b>✦</b>
+          <span>Continuous latents</span><b>✦</b><span>48 kHz audio</span><b>✦</b>
+          <span>Autoregressive diffusion</span>
+        </div>
+      </section>
+
+      <section class="intro section-shell" id="method">
+        <div class="section-index">01 / Overview</div>
+        <div class="intro-body">
+          <h2>A score is more than timing.</h2>
+          <p>
+            Instead of requiring phoneme-level durations or a time-aligned F0
+            curve, VocalRender accepts the symbolic language composers already
+            use. The model is free to realize natural phrasing while remaining
+            faithful to the written score.
+          </p>
+          <div class="feature-grid">
+            <article>
+              <span>01</span>
+              <h3>Interleaved score</h3>
+              <p>Lyrics and pitch–duration pairs preserve note-to-word alignment, including melisma.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Continuous acoustics</h3>
+              <p>Compact AudioVAE latents retain pitch, timbre, articulation, and fine acoustic detail.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Expressive rendering</h3>
+              <p>Autoregressive diffusion models global phrasing and reconstructs local detail.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="demos" id="demos">
+        <div class="section-shell">
+          <div class="demo-heading">
+            <div>
+              <div class="section-index">02 / Audio comparisons</div>
+              <h2>Hear the difference.</h2>
+            </div>
+            <p>For the fairest comparison, use headphones. Each card pairs one score with seven audio sources.</p>
+          </div>
+
+          <div class="demo-toolbar">
+            <div class="demo-count"><strong>08</strong><span>curated score<br />excerpts</span></div>
+            <div class="legend">
+              <span><i class="legend-dot proposed"></i> Ours</span>
+              <span><i class="legend-dot reference"></i> Reference</span>
+              <span><i class="legend-dot baseline"></i> Baseline</span>
+            </div>
+          </div>
+
+          <div id="demo-list" class="demo-list" aria-live="polite"></div>
+          <noscript>This demo page requires JavaScript for its audio controls.</noscript>
+        </div>
+      </section>
+
+      <dialog id="score-dialog" class="score-dialog">
+        <button class="score-dialog-close" type="button" aria-label="Close score preview">×</button>
+        <img src="" alt="Expanded music score" />
+      </dialog>
+
+      <section class="pipeline section-shell">
+        <div class="section-index">03 / Architecture</div>
+        <div class="pipeline-body">
+          <div class="pipeline-copy">
+            <h2>From notation<br />to nuance.</h2>
+            <p>
+              A global transformer sketches prosody and sequence length. LocDiT
+              restores local acoustic detail, and the AudioVAE decoder renders
+              the final waveform.
+            </p>
+            <a href="assets/structure.png" target="_blank" class="text-link">View full architecture <span>↗</span></a>
+          </div>
+          <div class="pipeline-diagram" aria-label="VocalRender processing pipeline">
+            <div class="pipeline-node node-score"><small>01</small><strong>Symbolic score</strong><span>lyrics · MIDI · note · BPM</span></div>
+            <i>→</i>
+            <div class="pipeline-node node-model"><small>02</small><strong>VocalRender</strong><span>AR Transformer + LocDiT</span></div>
+            <i>→</i>
+            <div class="pipeline-node node-audio"><small>03</small><strong>Singing audio</strong><span>expressive · 48 kHz</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="citation" id="citation">
+        <div class="section-shell citation-inner">
+          <div>
+            <div class="section-index light">04 / Citation</div>
+            <h2>Build on our work.</h2>
+            <p>If VocalRender is useful in your research, please cite the paper.</p>
+          </div>
+          <div class="citation-code">
+            <pre><code id="bibtex">@article{vocalrender2026,
+  title   = {VocalRender},
+  author  = {pymaster17},
+  journal = {arXiv preprint arXiv:2607.27768},
+  year    = {2026}
+}</code></pre>
+            <button id="copy-citation" aria-label="Copy BibTeX citation">Copy BibTeX</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="wordmark footer-mark" href="#top">
+        <span class="wordmark-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span>VocalRender</span>
+      </a>
+      <p>Score-native singing voice synthesis.</p>
+      <div><a href="https://github.com/pymaster17/VocalRender">GitHub</a><a href="https://huggingface.co/pymaster/VocalRender">Hugging Face</a><a href="https://arxiv.org/abs/2607.27768">Paper</a></div>
+    </footer>
+
+    <script src="assets/site/demo-data.js"></script>
+    <script src="assets/site/app.js"></script>
+  </body>
+</html>
