@@ -40,16 +40,16 @@
       <header class="demo-card-header">
         <div class="sample-number"><span>Sample</span>${escapeHtml(sample.number)}</div>
         <div class="sample-title">
-          <small>${escapeHtml(sample.artist)}</small>
-          <h3>「${escapeHtml(sample.title)}」</h3>
+          <small>Human-reviewed excerpt</small>
+          <h3>Anonymous evaluation sample</h3>
         </div>
-        <div class="sample-meta"><span>${escapeHtml(sample.languageLabel)}</span><span>${escapeHtml(sample.clip)}</span><span>Native SR</span></div>
+        <div class="sample-meta"><span>${escapeHtml(sample.languageLabel)}</span><span>Curated</span><span>Native SR</span></div>
       </header>
       <div class="demo-card-body">
         <figure class="score-panel">
           <div class="score-label"><span>Input score</span><small>Click to enlarge</small></div>
-          <button class="score-open" type="button" data-score="${escapeHtml(sample.score)}" data-title="${escapeHtml(sample.title)}" aria-label="Enlarge score for ${escapeHtml(sample.title)}">
-            <img src="${escapeHtml(sample.score)}" alt="Music score for ${escapeHtml(sample.title)}" loading="lazy" />
+          <button class="score-open" type="button" data-score="${escapeHtml(sample.score)}" data-title="Sample ${escapeHtml(sample.number)}" aria-label="Enlarge score for sample ${escapeHtml(sample.number)}">
+            <img src="${escapeHtml(sample.score)}" alt="Music score for sample ${escapeHtml(sample.number)}" loading="lazy" />
           </button>
         </figure>
         <div class="methods-panel">
@@ -141,14 +141,4 @@
     if (event.target === scoreDialog) scoreDialog.close();
   });
 
-  const copyButton = document.getElementById("copy-citation");
-  copyButton.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(document.getElementById("bibtex").textContent);
-      copyButton.textContent = "Copied";
-      window.setTimeout(() => { copyButton.textContent = "Copy BibTeX"; }, 1600);
-    } catch (_) {
-      copyButton.textContent = "Select text to copy";
-    }
-  });
 })();

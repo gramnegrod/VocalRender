@@ -1,8 +1,8 @@
 # Demo audio
 
 The project page reads its comparison data from
-`assets/site/demo-data.js`. The current curated set was copied from
-`/export/home2/n2505683d/VoxCPM/output/cloudtest` and uses this layout:
+`assets/site/demo-data.js`. The current human-reviewed set was copied from
+`/export/home2/n2505683d/VoxCPM/output/cloudtest_supplementary` and uses this layout:
 
 ```text
 assets/audio/
@@ -16,12 +16,12 @@ assets/audio/
 │   └── vocalrender-pro.flac
 ├── sample-02/
 │   └── ...
-└── sample-08/
+└── sample-10/
     └── ...
 ```
 
 Matching score images live at `assets/scores/sample-01.png` through
-`sample-08.png`. Missing files are handled gracefully: the corresponding
+`sample-10.png`. Missing files are handled gracefully: the corresponding
 player shows **Pending audio** and remains disabled.
 
 Edit the sample metadata and source list in `demo-data.js`. Adding another
