@@ -2,6 +2,8 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
+**Paper:** [VocalRender: Score-Native Singing Voice Synthesis for Real-World Composition](https://arxiv.org/abs/2607.27768)
+
 **VocalRender** is a singing voice synthesis (SVS) system built on top of
 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM). It adapts VoxCPM's
 tokenizer-free TTS architecture to singing by replacing the plain-text prompt
@@ -17,6 +19,34 @@ singing audio, optionally cloning timbre from a same-song prompt-audio clip.
 
 This repository is the minimal open-source release: data preprocessing,
 training, and inference.
+
+## Overview
+
+Unlike duration-based SVS systems that require an exact duration for every
+word or phoneme, or reference-based systems that depend on time-aligned audio
+or an F0 curve, VocalRender takes the same symbolic information used by a
+composer: lyrics, MIDI pitches, note values, and a global tempo. The model is
+free to realize natural timing and expressive deviations while following the
+score.
+
+![Comparison of duration-based, reference-based, and the proposed score-native singing voice synthesis inputs](assets/intro.png)
+
+VocalRender is built around three ideas:
+
+1. **Score-native interleaved representation.** The music-score tokenizer
+   serializes BPM followed by each lyric syllable and all of its associated
+   `(pitch, note-value)` pairs. This explicitly preserves lyric-to-note
+   alignment, including melisma, where one syllable spans multiple notes.
+2. **Continuous acoustic representation.** An Audio VAE encodes singing into
+   compact continuous latents, retaining fine-grained pitch, timbre, and
+   articulation information without discrete acoustic quantization.
+3. **Autoregressive diffusion generation.** The AR Transformer generates a
+   prosody sketch and predicts the sequence length patch by patch, while
+   LocDiT reconstructs high-fidelity local acoustic latents. The VAE decoder
+   then renders the completed latent sequence into waveform audio. This avoids
+   an explicit duration predictor and time-aligned acoustic guidance.
+
+![Overall architecture of VocalRender and its music-score tokenization process](assets/structure.png)
 
 ## Repository layout
 
@@ -80,6 +110,11 @@ comment in [conf/svs_preprocess.yaml](conf/svs_preprocess.yaml)):
   }
 }
 ```
+
+`word_dur` and `pitch_dur` are optional input fields used only for
+visualization and evaluation. They are not used to construct the score prompt
+or train the model. The required score fields are `word`, `pitch`, `note`,
+`pitch2word`, and `bpm`.
 
 Then encode audio into AudioVAE-V2 latents (Arrow shards):
 

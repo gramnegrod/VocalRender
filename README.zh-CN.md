@@ -2,6 +2,8 @@
 
 [English](README.md) | **简体中文**
 
+**论文:** [VocalRender: Score-Native Singing Voice Synthesis for Real-World Composition](https://arxiv.org/abs/2607.27768)
+
 **VocalRender** 是一个基于 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM)
 构建的歌声合成(SVS)系统。它将 VoxCPM 无 tokenizer 的 TTS 架构迁移到歌唱场景,
 把纯文本 prompt 替换为**「字 / 音高 / 音符」交错的乐谱 prompt**:
@@ -15,6 +17,28 @@
 克隆音色。
 
 本仓库是最小化开源版本,包含:数据预处理、训练与推理。
+
+## 原理简介
+
+不同于需要为每个字或音素指定精确时长的 SVS 系统,或依赖时序对齐参考音频、
+F0 曲线的系统,VocalRender 直接接收作曲者使用的符号信息:歌词、MIDI 音高、
+音符时值和全局速度。模型在遵循乐谱的同时自主生成自然时序与富有表现力的
+演唱细节。
+
+![基于时长、基于参考以及本文提出的乐谱原生歌声合成输入方式对比](assets/intro.png)
+
+VocalRender 包含三个关键设计:
+
+1. **乐谱原生的交错表示。** 乐谱 tokenizer 先编码 BPM,再依次排列每个歌词
+   音节及其对应的全部 `(音高, 音符时值)` 对,显式保留歌词与音符的对应关系,
+   并自然支持一个音节横跨多个音符的转音(melisma)。
+2. **连续声学表示。** Audio VAE 将歌声音频编码为紧凑的连续 latent,避免离散
+   声学量化的信息瓶颈,保留细粒度的音高、音色与咬字信息。
+3. **自回归扩散生成。** AR Transformer 生成韵律草图并逐个 patch 预测序列长度,
+   LocDiT 进一步还原高保真的局部声学 latent,最后由 VAE decoder 解码为波形。
+   因而模型无需显式时长预测器或时序对齐的声学引导。
+
+![VocalRender 整体架构与乐谱 tokenization 流程](assets/structure.png)
 
 ## 仓库结构
 
@@ -76,6 +100,10 @@ python scripts/setup_svs_tokenizer.py \
   }
 }
 ```
+
+`word_dur` 和 `pitch_dur` 是仅用于可视化和评测的可选输入字段,不参与乐谱
+prompt 构建或模型训练。必需的乐谱字段为 `word`、`pitch`、`note`、
+`pitch2word` 和 `bpm`。
 
 然后将音频编码为 AudioVAE-V2 latent(Arrow 分片):
 

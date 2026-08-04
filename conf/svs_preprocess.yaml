@@ -16,10 +16,10 @@
 #      {
 #        "2001000001": {
 #          "word":       ["AP", "感", "受", ..., "SP"],   # lyric per word slot (AP/SP = breath/silence)
-#          "word_dur":   [0.14, 0.31, ...],               # seconds, aligned with `word`
+#          "word_dur":   [0.14, 0.31, ...],               # optional; visualization/evaluation only, aligned with `word`
 #          "pitch":      [0, 62, 62, 60, ...],            # MIDI pitch per note segment (0 = rest)
 #          "note":       ["<NOTE_8>", "<NOTE_DOT_16>", ...],  # note-duration token per segment
-#          "pitch_dur":  [0.14, 0.31, ...],               # seconds per note segment
+#          "pitch_dur":  [0.14, 0.31, ...],               # optional; visualization/evaluation only, seconds per note segment
 #          "pitch2word": [0, 1, 1, 2, ...],               # note segment -> word index
 #          "bpm":        90
 #        },
