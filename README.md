@@ -2,9 +2,8 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Paper:** [VocalRender: Score-Native Singing Voice Synthesis for Real-World Composition](https://arxiv.org/abs/2607.27768)
-
-**Models:** [pymaster/VocalRender](https://huggingface.co/pymaster/VocalRender)
+[![arXiv](https://img.shields.io/badge/arXiv-2607.27768-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2607.27768)
+[![Model on Hugging Face](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-md.svg)](https://huggingface.co/pymaster/VocalRender)
 
 **VocalRender** is a singing voice synthesis (SVS) system built on top of
 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM). It adapts VoxCPM's
