@@ -3,11 +3,11 @@
 [English](README.md) | **简体中文**
 
 [![arXiv](https://img.shields.io/badge/arXiv-2607.27768-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2607.27768)
-[![Model on Hugging Face](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-md.svg)](https://huggingface.co/pymaster/VocalRender)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-VocalRender-FFD21E?logo=huggingface)](https://huggingface.co/pymaster/VocalRender)
 
-**VocalRender** 是一个基于 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM)
-构建的歌声合成(SVS)系统。它将 VoxCPM 无 tokenizer 的 TTS 架构迁移到歌唱场景,
-把纯文本 prompt 替换为**「字 / 音高 / 音符」交错的乐谱 prompt**:
+**VocalRender** 是一个面向真实作曲流程的乐谱原生歌声合成(SVS)系统。它通过
+原创的歌词—音符交错表示、连续声学 latent 与自回归扩散建模,直接将作曲者使用的
+符号乐谱渲染为歌声音频。模型采用**「字 / 音高 / 音符」交错的乐谱 prompt**:
 
 ```
 <BPM_90> 感<P_62><NOTE_8> 受<P_62><NOTE_DOT_16><P_60><NOTE_16> 停<P_59><NOTE_8> ... <audio_start> [audio latents...]

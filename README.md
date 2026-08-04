@@ -3,12 +3,14 @@
 **English** | [简体中文](README.zh-CN.md)
 
 [![arXiv](https://img.shields.io/badge/arXiv-2607.27768-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2607.27768)
-[![Model on Hugging Face](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-md.svg)](https://huggingface.co/pymaster/VocalRender)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-VocalRender-FFD21E?logo=huggingface)](https://huggingface.co/pymaster/VocalRender)
 
-**VocalRender** is a singing voice synthesis (SVS) system built on top of
-[OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM). It adapts VoxCPM's
-tokenizer-free TTS architecture to singing by replacing the plain-text prompt
-with a **word / pitch / note interleaved score prompt**:
+**VocalRender** is a score-native singing voice synthesis (SVS) system designed
+for real-world composition. It directly renders composer-oriented symbolic
+scores into singing audio through an original combination of an interleaved
+lyric--note representation, continuous acoustic latents, and autoregressive
+diffusion modeling. Its input is a **word / pitch / note interleaved score
+prompt**:
 
 ```
 <BPM_90> 感<P_62><NOTE_8> 受<P_62><NOTE_DOT_16><P_60><NOTE_16> 停<P_59><NOTE_8> ... <audio_start> [audio latents...]
