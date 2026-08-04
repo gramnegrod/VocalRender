@@ -4,6 +4,8 @@
 
 **论文:** [VocalRender: Score-Native Singing Voice Synthesis for Real-World Composition](https://arxiv.org/abs/2607.27768)
 
+**模型:** [pymaster/VocalRender](https://huggingface.co/pymaster/VocalRender)
+
 **VocalRender** 是一个基于 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM)
 构建的歌声合成(SVS)系统。它将 VoxCPM 无 tokenizer 的 TTS 架构迁移到歌唱场景,
 把纯文本 prompt 替换为**「字 / 音高 / 音符」交错的乐谱 prompt**:
@@ -68,7 +70,32 @@ pip install -e ".[viz]"
 pip install -e ./nanovllm-voxcpm
 ```
 
-## 预训练权重与 tokenizer
+## 预训练模型与 tokenizer
+
+可直接用于推理的 **VocalRender** 与 **VocalRender-Pro** checkpoint 已发布在
+[Hugging Face 模型仓库](https://huggingface.co/pymaster/VocalRender)。每个版本均
+包含模型权重、AudioVAE、配置文件以及扩展后的 SVS tokenizer。
+
+将所需版本下载到 `pretrained_models/`:
+
+```bash
+# VocalRender
+hf download pymaster/VocalRender \
+    --include "VocalRender/*" \
+    --local-dir pretrained_models
+
+# 或 VocalRender-Pro
+hf download pymaster/VocalRender \
+    --include "VocalRender-Pro/*" \
+    --local-dir pretrained_models
+```
+
+对应的 checkpoint 路径分别为 `pretrained_models/VocalRender` 和
+`pretrained_models/VocalRender-Pro`。每个版本约需下载 9.5 GB;完整音频生成
+需要在支持 CUDA 的计算节点上运行。
+
+以下步骤仅用于准备**训练所需的 VoxCPM2 基础模型**,使用已经发布的
+VocalRender checkpoint 推理时无需执行:
 
 1. 将 **VoxCPM2** 预训练 checkpoint 下载到 `pretrained_models/VoxCPM2`
    (需包含 `config.json`、模型权重以及 tokenizer 文件)。
@@ -142,11 +169,15 @@ python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
 
 ```bash
 python scripts/infer_vocalrender_svs_single.py \
-    --ckpt_dir checkpoints/svs_v2/latest \
-    --json_file data/labels/opencpop.json \
-    --item_name 2001000001 \
+    --ckpt_dir pretrained_models/VocalRender \
+    --json_file examples/inference_input.json \
+    --item_name demo \
     --output svs_output.wav
 ```
+
+该示例无需参考音频即可运行。如需克隆音色,可增加 `--prompt_item_name`,并在
+对应 JSON 条目中提供 `wav_fn`;相关音频路径选项见
+`python scripts/infer_vocalrender_svs_single.py --help`。
 
 ## 评测指标
 

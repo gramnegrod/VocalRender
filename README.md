@@ -4,6 +4,8 @@
 
 **Paper:** [VocalRender: Score-Native Singing Voice Synthesis for Real-World Composition](https://arxiv.org/abs/2607.27768)
 
+**Models:** [pymaster/VocalRender](https://huggingface.co/pymaster/VocalRender)
+
 **VocalRender** is a singing voice synthesis (SVS) system built on top of
 [OpenBMB VoxCPM](https://github.com/OpenBMB/VoxCPM). It adapts VoxCPM's
 tokenizer-free TTS architecture to singing by replacing the plain-text prompt
@@ -76,7 +78,33 @@ pip install -e ".[viz]"
 pip install -e ./nanovllm-voxcpm
 ```
 
-## Pretrained weights & tokenizer
+## Pretrained checkpoints & tokenizer
+
+Ready-to-run **VocalRender** and **VocalRender-Pro** checkpoints are available
+from the [Hugging Face model repository](https://huggingface.co/pymaster/VocalRender).
+Each variant includes the model weights, AudioVAE, configuration, and extended
+SVS tokenizer.
+
+Download one variant into `pretrained_models/`:
+
+```bash
+# VocalRender
+hf download pymaster/VocalRender \
+    --include "VocalRender/*" \
+    --local-dir pretrained_models
+
+# Or VocalRender-Pro
+hf download pymaster/VocalRender \
+    --include "VocalRender-Pro/*" \
+    --local-dir pretrained_models
+```
+
+The resulting checkpoint paths are `pretrained_models/VocalRender` and
+`pretrained_models/VocalRender-Pro`, respectively. Each download is about
+9.5 GB. Full audio generation requires a CUDA-capable compute node.
+
+The following steps are needed only when preparing the **VoxCPM2 base model
+for training**, not when using the released VocalRender checkpoints:
 
 1. Download the **VoxCPM2** pretrained checkpoint into
    `pretrained_models/VoxCPM2` (must contain `config.json`, model weights,
@@ -153,11 +181,16 @@ and `nano_vllm` (continuous batching, faster for metric-only runs).
 
 ```bash
 python scripts/infer_vocalrender_svs_single.py \
-    --ckpt_dir checkpoints/svs_v2/latest \
-    --json_file data/labels/opencpop.json \
-    --item_name 2001000001 \
+    --ckpt_dir pretrained_models/VocalRender \
+    --json_file examples/inference_input.json \
+    --item_name demo \
     --output svs_output.wav
 ```
+
+The example runs without reference audio. To clone a timbre, add a
+`--prompt_item_name` whose JSON entry contains `wav_fn`; see
+`python scripts/infer_vocalrender_svs_single.py --help` for the related audio
+path options.
 
 ## Metrics
 
