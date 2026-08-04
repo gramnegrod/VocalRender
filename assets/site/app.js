@@ -20,7 +20,7 @@
   const methodMarkup = (sample, method) => {
     const audioId = `audio-${sample.id}-${method.id}`;
     return `
-      <div class="method-tile" data-type="${escapeHtml(method.type)}">
+      <div class="method-tile" data-type="${escapeHtml(method.type)}" data-method="${escapeHtml(method.id)}">
         <div class="method-tile-head">
           <div class="method-name"><i aria-hidden="true"></i>${escapeHtml(method.name)}</div>
           ${method.tag ? `<span class="method-tag">${escapeHtml(method.tag)}</span>` : ""}
@@ -39,11 +39,6 @@
     <article class="demo-card">
       <header class="demo-card-header">
         <div class="sample-number"><span>Sample</span>${escapeHtml(sample.number)}</div>
-        <div class="sample-title">
-          <small>Human-reviewed excerpt</small>
-          <h3>Anonymous evaluation sample</h3>
-        </div>
-        <div class="sample-meta"><span>${escapeHtml(sample.languageLabel)}</span><span>Curated</span><span>Native SR</span></div>
       </header>
       <div class="demo-card-body">
         <figure class="score-panel">

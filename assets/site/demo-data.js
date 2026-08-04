@@ -17,7 +17,6 @@
 
   window.VOCALRENDER_DEMOS = samples.map((sample) => ({
     ...sample,
-    languageLabel: "Mandarin",
     score: `assets/scores/${sample.id}.png`,
     methods: sources.map((source) => ({
       ...source,
