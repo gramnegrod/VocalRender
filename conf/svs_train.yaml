@@ -26,15 +26,16 @@ preprocessed_data_path: data/preprocessed
 # Datasets used for training / validation, selected by the `dataset`
 # field stamped on each sample during preprocessing. Comment out
 # train_datasets to train on everything except val_datasets.
-train_datasets: ["m4singer", "gtsinger", "opensinger-man", "opensinger-woman"]
+train_datasets: ["muse", "muchin", "songformdb", "opensinger", "m4singer", "gtsinger"]
 
 # Optional per-dataset repetition factor (rebalances small datasets).
 # dataset_upsample:
 #   m4singer: 5
 #   gtsinger: 5
 
-val_datasets:
-  - opencpop
+# Opencpop is included in CrawlSinger-OS as the held-out validation set.
+val_datasets: ["opencpop"]
+val_samples: 0
 
 sample_rate: 48000
 

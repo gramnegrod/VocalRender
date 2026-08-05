@@ -124,12 +124,44 @@ Model embeddings are resized automatically at training start.
 
 ## Data preprocessing
 
+The released training data is available as
+[CrawlSinger-OS](https://huggingface.co/datasets/pymaster/CrawlSinger-OS),
+which contains Muse, Muchin, SongFormDB, OpenSinger, M4Singer, and GTSinger
+for training, plus Opencpop as the held-out validation set.
+Download the independently sharded archives and restore the directory expected
+by [conf/svs_preprocess.yaml](conf/svs_preprocess.yaml):
+
+```bash
+hf download pymaster/CrawlSinger-OS \
+    --repo-type dataset \
+    --local-dir data/CrawlSinger-OS-release
+
+mkdir -p data/CrawlSinger-OS
+find data/CrawlSinger-OS-release -type f -name '*.tar' -print0 |
+    while IFS= read -r -d '' shard; do
+        tar -xf "$shard" -C data/CrawlSinger-OS
+    done
+
+for dataset in opensinger m4singer gtsinger opencpop; do
+    cp "data/CrawlSinger-OS-release/${dataset}/annotations.json" \
+       "data/CrawlSinger-OS/${dataset}/annotations.json"
+done
+```
+
+The archives contain the three folder-based datasets directly and place the
+audio for each of the four JSON-based datasets under `<dataset>/audio/`. The copied
+annotation files complete the layout consumed by the default preprocessing
+configuration. Keep enough disk space for both the downloaded archives and
+the extracted data.
+
 Annotate each audio segment with word/pitch/note fields (see the schema
 comment in [conf/svs_preprocess.yaml](conf/svs_preprocess.yaml)):
 
 ```jsonc
-{
-  "2001000001": {
+[
+  {
+    "item_name": "Alto-1#newboy#0000",
+    "wav_fn":    "Alto-1#newboy/0000.wav",
     "word":       ["AP", "感", "受", "SP"],
     "word_dur":   [0.14, 0.31, 0.42, 0.20],
     "pitch":      [0, 62, 62, 0],
@@ -138,7 +170,7 @@ comment in [conf/svs_preprocess.yaml](conf/svs_preprocess.yaml)):
     "pitch2word": [0, 1, 2, 3],
     "bpm":        90
   }
-}
+]
 ```
 
 `word_dur` and `pitch_dur` are optional input fields used only for

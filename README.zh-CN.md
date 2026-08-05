@@ -111,12 +111,42 @@ python scripts/setup_svs_tokenizer.py \
 
 ## 数据预处理
 
+训练数据已发布在
+[CrawlSinger-OS](https://huggingface.co/datasets/pymaster/CrawlSinger-OS),
+其中包含用于训练的 Muse、Muchin、SongFormDB、OpenSinger、M4Singer 和
+GTSinger,以及作为独立验证集的 Opencpop。
+下载独立 TAR 分片,并恢复
+[conf/svs_preprocess.yaml](conf/svs_preprocess.yaml) 默认使用的目录结构:
+
+```bash
+hf download pymaster/CrawlSinger-OS \
+    --repo-type dataset \
+    --local-dir data/CrawlSinger-OS-release
+
+mkdir -p data/CrawlSinger-OS
+find data/CrawlSinger-OS-release -type f -name '*.tar' -print0 |
+    while IFS= read -r -d '' shard; do
+        tar -xf "$shard" -C data/CrawlSinger-OS
+    done
+
+for dataset in opensinger m4singer gtsinger opencpop; do
+    cp "data/CrawlSinger-OS-release/${dataset}/annotations.json" \
+       "data/CrawlSinger-OS/${dataset}/annotations.json"
+done
+```
+
+归档中直接包含三个 `folder_based` 数据集;四个 `json_file` 数据集的音频
+位于 `<dataset>/audio/`。复制标注文件后即可使用默认预处理配置。请为下载的
+归档和解包后的数据同时预留足够磁盘空间。
+
 为每个音频片段标注 字 / 音高 / 音符 字段(schema 说明见
 [conf/svs_preprocess.yaml](conf/svs_preprocess.yaml)):
 
 ```jsonc
-{
-  "2001000001": {
+[
+  {
+    "item_name": "Alto-1#newboy#0000",
+    "wav_fn":    "Alto-1#newboy/0000.wav",
     "word":       ["AP", "感", "受", "SP"],
     "word_dur":   [0.14, 0.31, 0.42, 0.20],
     "pitch":      [0, 62, 62, 0],
@@ -125,7 +155,7 @@ python scripts/setup_svs_tokenizer.py \
     "pitch2word": [0, 1, 2, 3],
     "bpm":        90
   }
-}
+]
 ```
 
 `word_dur` 和 `pitch_dur` 是仅用于可视化和评测的可选输入字段,不参与乐谱

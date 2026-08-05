@@ -12,9 +12,11 @@
 # ================================================================
 # Two loader types are supported:
 #
-# 1. json_file — a label JSON mapping item_name -> annotation:
-#      {
-#        "2001000001": {
+# 1. json_file — a JSON array with one annotation object per audio segment:
+#      [
+#        {
+#          "item_name": "Alto-1#newboy#0000",
+#          "wav_fn":    "Alto-1#newboy/0000.wav",
 #          "word":       ["AP", "感", "受", ..., "SP"],   # lyric per word slot (AP/SP = breath/silence)
 #          "word_dur":   [0.14, 0.31, ...],               # optional; visualization/evaluation only, aligned with `word`
 #          "pitch":      [0, 62, 62, 60, ...],            # MIDI pitch per note segment (0 = rest)
@@ -22,10 +24,10 @@
 #          "pitch_dur":  [0.14, 0.31, ...],               # optional; visualization/evaluation only, seconds per note segment
 #          "pitch2word": [0, 1, 1, 2, ...],               # note segment -> word index
 #          "bpm":        90
-#        },
+#        }
 #        ...
-#      }
-#    Audio is read from <audio_root>/<item_name>.wav (or .mp3/.flac/.opus).
+#      ]
+#    Audio is read from <audio_root>/<wav_fn>.
 #    song_id_indices / song_id_slice / song_id_separator derive a song_name
 #    from item_name so that train/val prompt clips stay within one song.
 #
@@ -33,21 +35,47 @@
 #    files plus a metadata.json aggregating the same annotation fields.
 
 datasets:
+  # CrawlSinger-OS: https://huggingface.co/datasets/pymaster/CrawlSinger-OS
+  # Download and extract the TAR shards as described in README.md so this
+  # directory contains muse/, muchin/, songformdb/, opensinger/, m4singer/,
+  # gtsinger/, and opencpop/.
+  - name: muse
+    type: folder_based
+    dataset_root: data/CrawlSinger-OS/muse
+
+  - name: muchin
+    type: folder_based
+    dataset_root: data/CrawlSinger-OS/muchin
+
+  - name: songformdb
+    type: folder_based
+    dataset_root: data/CrawlSinger-OS/songformdb
+
+  - name: opensinger
+    type: json_file
+    json_path: data/CrawlSinger-OS/opensinger/annotations.json
+    audio_root: data/CrawlSinger-OS/opensinger/audio
+    song_id_indices: [0, 1]
+    song_id_separator: "#"
+
+  - name: m4singer
+    type: json_file
+    json_path: data/CrawlSinger-OS/m4singer/annotations.json
+    audio_root: data/CrawlSinger-OS/m4singer/audio
+    song_id_indices: [0, 1]
+
+  - name: gtsinger
+    type: json_file
+    json_path: data/CrawlSinger-OS/gtsinger/annotations.json
+    audio_root: data/CrawlSinger-OS/gtsinger/audio
+    song_id_indices: [1, 3]
+
+  # Held out by conf/svs_train.yaml for validation.
   - name: opencpop
     type: json_file
-    json_path: data/labels/opencpop.json
-    audio_root: data/audio/Opencpop
+    json_path: data/CrawlSinger-OS/opencpop/annotations.json
+    audio_root: data/CrawlSinger-OS/opencpop/audio
     song_id_slice: [0, 4]
-
-  # - name: m4singer
-  #   type: json_file
-  #   json_path: data/labels/m4singer.json
-  #   audio_root: data/audio/m4singer
-  #   song_id_indices: [0, 1]
-
-  # - name: my_folder_dataset
-  #   type: folder_based
-  #   dataset_root: data/audio/my_folder_dataset
 
 # Pre-trained model path (VoxCPM2, for AudioVAE V2 and tokenizer)
 pretrained_path: pretrained_models/VoxCPM2
