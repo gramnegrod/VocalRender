@@ -86,7 +86,11 @@ Prompt 音频是必需输入:已发布 checkpoint 的所有训练样本均使用
 (`prompt_audio_prob: 1.0`)。使用自定义乐谱时,请提供 2-8 秒的干净歌声片段,
 它也用于指定目标音色。
 
-更大的 **VocalRender-Pro** checkpoint 使用相同的推理命令:
+**VocalRender** 与 **VocalRender-Pro** 的架构、参数量及语音预训练基础模型初始化
+完全相同,两者仅采用不同的训练策略(训练数据与训练 schedule):VocalRender 在
+CrawlSinger-OS 上先进行合成数据预训练、再使用真实数据 finetune;
+VocalRender-Pro 则在规模更大的真实歌声 CrawlSinger 上进行更长时间训练。完整
+设置详见论文。Pro checkpoint 使用相同的推理命令:
 
 ```bash
 hf download pymaster/VocalRender \

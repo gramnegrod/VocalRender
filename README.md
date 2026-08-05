@@ -99,7 +99,13 @@ Prompt audio is required because the released checkpoints were trained with
 prompt audio on every sample (`prompt_audio_prob: 1.0`). For your own scores,
 use a clean 2-8 second singing clip; it also specifies the target timbre.
 
-The larger **VocalRender-Pro** checkpoint can be used with the same command:
+**VocalRender** and **VocalRender-Pro** have the same architecture, parameter
+count, and speech-pretrained base-model initialization. They differ only in
+training recipe (training data and schedule): VocalRender uses two-stage
+synthetic pretraining followed by real-data finetuning on CrawlSinger-OS,
+whereas VocalRender-Pro is trained longer on the larger real-singing
+CrawlSinger corpus. See the paper for the complete settings. To use the Pro
+checkpoint with the same inference command:
 
 ```bash
 hf download pymaster/VocalRender \
