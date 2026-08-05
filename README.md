@@ -212,16 +212,30 @@ Two backends are available (`docs/inference_backends.md`):
 `multi_gpu` (default, in-process; supports prompt audio + score rendering)
 and `nano_vllm` (continuous batching, faster for metric-only runs).
 
-**Single sample** from a label JSON:
+**Single sample** from a label JSON. Three prompt-conditioned OpenCpop demos
+are included; each score is paired with a different, non-overlapping singing
+clip from the same source song:
+
+| Score `item_name` | Prompt audio | Output example |
+|---|---|---|
+| `2003000087` | `2003000081.wav` (6.17 s) | `demo_2003000087.wav` |
+| `2017000646` | `2017000644.wav` (4.19 s) | `demo_2017000646.wav` |
+| `2044001652` | `2044001666.wav` (5.33 s) | `demo_2044001652.wav` |
 
 ```bash
 python scripts/infer_vocalrender_svs_single.py \
     --ckpt_dir pretrained_models/VocalRender \
-    --json_file examples/inference_input.json \
-    --item_name demo \
-    --prompt_audio path/to/2-8s_prompt.wav \
-    --output svs_output.wav
+    --json_file examples/opencpop_demo.json \
+    --item_name 2003000087 \
+    --prompt_audio examples/prompt_audio/2003000081.wav \
+    --output demo_2003000087.wav
 ```
+
+To run the other two demos, use the corresponding score/prompt pairs in the
+table. The demo score JSON intentionally contains only inference fields;
+`word_dur` and `pitch_dur` are optional visualization/evaluation metadata.
+The bundled excerpts are selected from
+[OpenCpop](https://wenet.org.cn/opencpop/) and remain subject to its terms.
 
 Prompt audio is required. The released checkpoints were trained with prompt
 audio on every sample (`prompt_audio_prob: 1.0`), so prompt-free inference is

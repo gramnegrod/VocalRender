@@ -29,6 +29,9 @@ runs/
 !assets/audio/**/*.mp3
 !assets/audio/**/*.ogg
 
+# Prompt audio used by the reproducible single-inference examples.
+!examples/prompt_audio/*.wav
+
 # Editor / OS
 .idea/
 .vscode/
