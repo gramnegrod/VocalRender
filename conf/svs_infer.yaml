@@ -36,7 +36,7 @@ max_len: 200
 # ================================================================
 
 use_batch_inference: true
-use_prompt_audio: true
+# Prompt audio is mandatory; training used prompt_audio_prob=1.0.
 prompt_max_frames: 50
 save_audio_max: 100
 
@@ -54,11 +54,11 @@ save_score: true
 # ================================================================
 # Inference Backend (see docs/inference_backends.md)
 # ================================================================
-# Leave unset to use the in-process multi_gpu path (the default — it's the
-# only backend that supports ``use_prompt_audio`` and ``save_score``).
+# Leave unset to use the in-process multi_gpu path (the default, recommended
+# when score rendering is needed).
 #
-# To accelerate metric-only runs (``use_prompt_audio: false``, no score
-# rendering) with nano-vllm's continuous batching, uncomment:
+# To use nano-vllm continuous batching with prompt-conditioned inference,
+# uncomment:
 #
 # inference_backend:
 #   type: nano_vllm

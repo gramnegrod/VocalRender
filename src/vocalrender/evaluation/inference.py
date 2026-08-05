@@ -289,6 +289,20 @@ def run_inference_batch(
                 batch_indices, pa_dataset, pa_song_index, pa_idx_to_song,
                 pa_max_frames, pa_rng, index_map=pa_index_map,
             )
+        if batch_prompt_audio is None or any(p is None for p in batch_prompt_audio):
+            missing = (
+                batch_indices
+                if batch_prompt_audio is None
+                else [
+                    idx for idx, prompt in zip(batch_indices, batch_prompt_audio)
+                    if prompt is None
+                ]
+            )
+            raise RuntimeError(
+                "Prompt-conditioned inference requires prompt audio for every "
+                f"sample; missing prompt for indices {missing[:10]}"
+                + ("..." if len(missing) > 10 else "")
+            )
         try:
             with torch.no_grad():
                 generate_kwargs = dict(
@@ -589,6 +603,21 @@ def run_inference_batch_multi_gpu(
         prompt_audio_feats_all = _extract_batch_prompt_audio(
             sorted_indices, pa_dataset, pa_song_index, pa_idx_to_song,
             pa_max_frames, pa_rng, index_map=pa_index_map,
+        )
+    if prompt_audio_feats_all is None or any(p is None for p in prompt_audio_feats_all):
+        sorted_indices = [s["index"] for s in all_samples_data]
+        missing = (
+            sorted_indices
+            if prompt_audio_feats_all is None
+            else [
+                idx for idx, prompt in zip(sorted_indices, prompt_audio_feats_all)
+                if prompt is None
+            ]
+        )
+        raise RuntimeError(
+            "Prompt-conditioned inference requires prompt audio for every "
+            f"sample; missing prompt for indices {missing[:10]}"
+            + ("..." if len(missing) > 10 else "")
         )
 
     # ---- Step 2: Create pool & dispatch ----

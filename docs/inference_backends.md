@@ -57,9 +57,9 @@ inference_backend:
 
 `infer_vocalrender_svs.py` auto-routes on the YAML's `inference_backend.type`:
 
-- `multi_gpu` (default) — full feature parity: supports `use_prompt_audio`,
+- `multi_gpu` (default) — full feature parity: supports prompt audio,
   `save_score`, and `lyrics_only` rebuild.
-- `nano_vllm` — covers plain V2 SVS and `use_prompt_audio`
+- `nano_vllm` — covers prompt-conditioned V2 SVS
   (`same_song` / `static_ref` / `pre_extracted`) via wrapper-side
   `prompt_audio_feats → ref_audio_latents` byte translation, and
   `save_score` (the GT score notation is rendered driver-side from the

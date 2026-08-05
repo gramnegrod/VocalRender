@@ -19,8 +19,8 @@ prompt**:
 ```
 
 Each lyric word is followed by one or more `(pitch, note-duration)` token
-pairs, plus a global BPM token — the model renders the score into 48 kHz
-singing audio, optionally cloning timbre from a same-song prompt-audio clip.
+pairs, plus a global BPM token. Together with a required prompt-audio clip for
+timbre conditioning, the model renders the score into 48 kHz singing audio.
 
 This repository is the minimal open-source release: data preprocessing,
 training, and inference.
@@ -219,13 +219,14 @@ python scripts/infer_vocalrender_svs_single.py \
     --ckpt_dir pretrained_models/VocalRender \
     --json_file examples/inference_input.json \
     --item_name demo \
+    --prompt_audio path/to/2-8s_prompt.wav \
     --output svs_output.wav
 ```
 
-The example runs without reference audio. To clone a timbre, add a
-`--prompt_item_name` whose JSON entry contains `wav_fn`; see
-`python scripts/infer_vocalrender_svs_single.py --help` for the related audio
-path options.
+Prompt audio is required. The released checkpoints were trained with prompt
+audio on every sample (`prompt_audio_prob: 1.0`), so prompt-free inference is
+not supported and may substantially degrade quality. Use a clean 2-8 second
+singing clip; it also provides the target timbre.
 
 ## Metrics
 

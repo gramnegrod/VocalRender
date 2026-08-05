@@ -146,17 +146,37 @@ def _resolve_prompt_audio_feats(
     matching-song slice). Shared between multi_gpu and nano_vllm dispatch
     paths so both backends apply identical resolution semantics.
     """
+    def _require_all(feats: list | None) -> list:
+        if feats is None:
+            raise RuntimeError(
+                "Prompt-conditioned inference requires prompt audio for every sample."
+            )
+        missing = [
+            samples[pos]["index"]
+            for pos, feat in enumerate(feats)
+            if feat is None
+        ]
+        if missing:
+            preview = ", ".join(str(idx) for idx in missing[:10])
+            suffix = "..." if len(missing) > 10 else ""
+            raise RuntimeError(
+                "No prompt audio could be resolved for sample indices "
+                f"{preview}{suffix}. Use a same-song pool with another segment "
+                "for every sample, or set prompt_audio_mode=static_ref."
+            )
+        return feats
+
     if prompt_audio_config is None:
-        return None
+        return _require_all(None)
     from vocalrender.evaluation.inference import _extract_batch_prompt_audio
 
     sorted_indices = [s["index"] for s in samples]
     if "pre_extracted" in prompt_audio_config:
         pre_extracted = prompt_audio_config["pre_extracted"]
-        return [
+        return _require_all([
             pre_extracted[idx] if idx < len(pre_extracted) else None
             for idx in sorted_indices
-        ]
+        ])
     if "static_by_dataset" in prompt_audio_config or "static_default" in prompt_audio_config:
         by_dataset = prompt_audio_config.get("static_by_dataset") or {}
         default = prompt_audio_config.get("static_default")
@@ -164,9 +184,9 @@ def _resolve_prompt_audio_feats(
         for idx in sorted_indices:
             ds_name = val_ds[idx].get("dataset_name", "")
             out.append(by_dataset.get(ds_name, default))
-        return out
+        return _require_all(out)
     if "dataset" in prompt_audio_config and "song_index" in prompt_audio_config:
-        return _extract_batch_prompt_audio(
+        return _require_all(_extract_batch_prompt_audio(
             sorted_indices,
             prompt_audio_config["dataset"],
             prompt_audio_config["song_index"],
@@ -178,8 +198,8 @@ def _resolve_prompt_audio_feats(
             prompt_audio_config.get("max_frames", 50),
             __import__("random").Random(prompt_audio_config.get("seed", 42)),
             index_map=prompt_audio_config.get("index_map"),
-        )
-    return None
+        ))
+    return _require_all(None)
 
 
 def _select_sample_indices(num_samples: int, n_total: int, seed: int = 42) -> list[int]:
@@ -887,8 +907,6 @@ def infer(
     # Evaluation metrics (nested dict, see YAML config for structure)
     eval_metrics: dict = None,
     # Prompt audio configuration
-    use_prompt_audio: bool = False,
-    prompt_audio_prob: float = 0.0,
     prompt_max_frames: int = 50,
     prompt_audio_mode: str = "same_song",
     reference_wavs: dict = None,
@@ -925,17 +943,15 @@ def infer(
             model loading uses ``devices[0]``; ``len(devices) > 1``
             triggers the multi_gpu backend automatically.
         eval_metrics: Dict of metric configs (singmos, aes, alignment), each with enabled flag and params
-        use_prompt_audio: Whether to prepend same-song prompt audio during inference.
-            When enabled, matches training validation behaviour by using a
-            deterministic prompt from the combined train+val split pool for
-            every eligible sample.
-        prompt_audio_prob: Legacy alias for enabling prompt audio (>0 enables it).
         prompt_max_frames: Max VAE latent frames for prompt audio
         save_audio_max: Cap on the number of generated/reference/score
             artefacts written to disk. ``-1`` (default) writes every
             inferred sample. Eval metrics still see all samples.
     """
     _ = config_path  # Used by argbind, not needed here
+    # Released checkpoints were trained with prompt_audio_prob=1.0. Public
+    # inference therefore exposes prompt-conditioned generation only.
+    use_prompt_audio = True
     
     # Validate arguments
     if not ckpt_dir:
@@ -1000,11 +1016,6 @@ def infer(
         print(f"[Eval] Active metrics: {active_metrics}", file=sys.stderr)
         if evaluator.aes_axes:
             print(f"[Eval] AES axes: {evaluator.aes_axes}", file=sys.stderr)
-
-    if prompt_audio_prob > 0 and not use_prompt_audio:
-        print("[SVS Inference] prompt_audio_prob is deprecated in inference; enabling "
-              "validation-style prompt audio because prompt_audio_prob > 0", file=sys.stderr)
-        use_prompt_audio = True
 
     # ---- Batch inference on validation set ----
     train_ds, val_ds = load_preprocessed_split_data(

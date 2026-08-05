@@ -175,7 +175,7 @@ VocalRender/
 ### 3.2 推理数据流
 
 ```text
-SVS 输入 (乐谱标注 + 可选参考音频)
+SVS 输入 (乐谱标注 + 必需的 prompt 音频)
        │
        ▼
   evaluation/inference.py  (或 inference/backends/*)

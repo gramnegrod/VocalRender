@@ -15,9 +15,8 @@
 <BPM_90> 感<P_62><NOTE_8> 受<P_62><NOTE_DOT_16><P_60><NOTE_16> 停<P_59><NOTE_8> ... <audio_start> [audio latents...]
 ```
 
-每个歌词字后面跟一个或多个 `(音高, 音符时值)` token 对,再加一个全局 BPM token
-——模型将乐谱渲染为 48 kHz 的歌声音频,并可选地从同一首歌的 prompt 音频片段中
-克隆音色。
+每个歌词字后面跟一个或多个 `(音高, 音符时值)` token 对,再加一个全局 BPM token。
+模型同时接收必需的 prompt 歌声片段作为音色条件,并将乐谱渲染为 48 kHz 歌声。
 
 本仓库是最小化开源版本,包含:数据预处理、训练与推理。
 
@@ -203,12 +202,13 @@ python scripts/infer_vocalrender_svs_single.py \
     --ckpt_dir pretrained_models/VocalRender \
     --json_file examples/inference_input.json \
     --item_name demo \
+    --prompt_audio path/to/2-8s_prompt.wav \
     --output svs_output.wav
 ```
 
-该示例无需参考音频即可运行。如需克隆音色,可增加 `--prompt_item_name`,并在
-对应 JSON 条目中提供 `wav_fn`;相关音频路径选项见
-`python scripts/infer_vocalrender_svs_single.py --help`。
+推理必须提供 prompt 音频。已发布 checkpoint 的所有训练样本均使用 prompt 音频
+(`prompt_audio_prob: 1.0`),因此不支持可能导致明显质量劣化的无 prompt 推理。
+建议使用 2-8 秒的干净歌声片段,它同时用于指定目标音色。
 
 ## 评测指标
 

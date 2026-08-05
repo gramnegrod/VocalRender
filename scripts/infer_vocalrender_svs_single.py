@@ -20,33 +20,19 @@ Input JSON format (same as label.json / Opencpop.json):
     ]
 
 Usage:
-    # Basic
-    python scripts/infer_vocalrender_svs_single.py \\
-        --ckpt_dir outputs/svs_ft/latest \\
-        --json_file Opencpop.json \\
-        --item_name 2001000001
-
-    # With prompt audio from another entry
+    # Prompt-conditioned inference (required)
     python scripts/infer_vocalrender_svs_single.py \\
         --ckpt_dir outputs/svs_ft/latest \\
         --json_file Opencpop.json \\
         --item_name 2001000001 \\
-        --prompt_item_name 2001000003
-
-    # Custom audio root (prefix for wav_fn paths)
-    python scripts/infer_vocalrender_svs_single.py \\
-        --ckpt_dir outputs/svs_ft/latest \\
-        --json_file Opencpop.json \\
-        --item_name 2001000001 \\
-        --prompt_item_name 2001000003 \\
-        --audio_root /data/opencpop
+        --prompt_audio /path/to/2-8s_prompt.wav
 """
 
 import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import torch
 import torch.nn as nn
@@ -277,13 +263,10 @@ def parse_args():
     parser.add_argument("--item_name", required=True,
                         help="item_name of the entry to synthesize")
 
-    # Prompt audio (optional)
-    parser.add_argument("--prompt_item_name", default="",
-                        help="item_name of the entry whose audio is used as prompt")
-    parser.add_argument("--prompt_json_file", default="",
-                        help="JSON file for prompt audio (defaults to --json_file)")
-    parser.add_argument("--prompt_audio_root", default="",
-                        help="Audio root for prompt wav_fn (defaults to --audio_root)")
+    # Prompt audio is required: released checkpoints were trained with
+    # prompt_audio_prob=1.0, so prompt-free inference is out-of-distribution.
+    parser.add_argument("--prompt_audio", required=True,
+                        help="Path to a clean 2-8 second singing prompt wav")
     parser.add_argument("--prompt_max_frames", type=int, default=50,
                         help="Max VAE latent frames for prompt audio")
     parser.add_argument("--lyrics_only", action="store_true",
@@ -333,6 +316,11 @@ def main():
     print(f"  bpm: {entry.get('bpm', 120)}, label: {effective_mode}",
           file=sys.stderr)
 
+    wav_path = Path(args.prompt_audio)
+    if not wav_path.is_file():
+        print(f"Error: prompt audio not found: {wav_path}", file=sys.stderr)
+        sys.exit(1)
+
     # ---- Load model ----
     model = load_svs_model(args.ckpt_dir, device=args.device)
     sample_rate = get_out_sample_rate(model)
@@ -344,53 +332,20 @@ def main():
     print(f"  prompt: {svs_prompt[:200]}{'...' if len(svs_prompt) > 200 else ''}",
           file=sys.stderr)
 
-    # ---- Prompt audio (optional, on-the-fly VAE encode) ----
-    prompt_audio_feats = None
-    if args.prompt_item_name:
-        # Load prompt JSON (may differ from text input JSON)
-        prompt_json = args.prompt_json_file or args.json_file
-        prompt_audio_root = args.prompt_audio_root
-
-        if prompt_json == args.json_file:
-            prompt_name_to_entry = name_to_entry
-        else:
-            print(f"[SVS Single] Loading prompt JSON: {prompt_json}", file=sys.stderr)
-            with open(prompt_json, "r", encoding="utf-8") as f:
-                prompt_entries = json.load(f)
-            prompt_name_to_entry = {e["item_name"]: e for e in prompt_entries if e.get("item_name")}
-
-        prompt_entry = prompt_name_to_entry.get(args.prompt_item_name)
-        if prompt_entry is None:
-            print(f"Error: prompt_item_name '{args.prompt_item_name}' not found",
-                  file=sys.stderr)
-            sys.exit(1)
-
-        wav_fn = prompt_entry.get("wav_fn", "")
-        if not wav_fn:
-            print(f"Error: prompt entry '{args.prompt_item_name}' has no wav_fn",
-                  file=sys.stderr)
-            sys.exit(1)
-
-        wav_path = Path(prompt_audio_root) / wav_fn if prompt_audio_root else Path(wav_fn)
-        if not wav_path.exists():
-            print(f"Error: audio file not found: {wav_path}", file=sys.stderr)
-            sys.exit(1)
-
-        print(f"[SVS Single] Encoding prompt audio: {wav_path}", file=sys.stderr)
-        prompt_audio_feats = encode_prompt_audio(
-            str(wav_path), model, max_frames=args.prompt_max_frames,
-        )
-        if prompt_audio_feats is not None:
-            print(f"  prompt latent: {prompt_audio_feats.shape}", file=sys.stderr)
-        else:
-            print(f"  Warning: VAE encoding failed", file=sys.stderr)
+    # ---- Required prompt audio (on-the-fly VAE encode) ----
+    print(f"[SVS Single] Encoding prompt audio: {wav_path}", file=sys.stderr)
+    prompt_audio_feats = encode_prompt_audio(
+        str(wav_path), model, max_frames=args.prompt_max_frames,
+    )
+    if prompt_audio_feats is None or prompt_audio_feats.numel() == 0:
+        print("Error: prompt audio encoding failed", file=sys.stderr)
+        sys.exit(1)
+    print(f"  prompt latent: {prompt_audio_feats.shape}", file=sys.stderr)
 
     # ---- Generate ----
     print(f"[SVS Single] Generating (cfg={args.cfg_value}, "
           f"steps={args.inference_timesteps}, max_len={args.max_len})...",
           file=sys.stderr)
-
-    pa_list = [prompt_audio_feats] if prompt_audio_feats is not None else None
 
     gen_kwargs = dict(
         target_texts=[svs_prompt],
@@ -400,7 +355,7 @@ def main():
         verbose=True,
         temperature=args.temperature,
         fsq_temperature=args.fsq_temperature,
-        prompt_audio_feats=pa_list,
+        prompt_audio_feats=[prompt_audio_feats],
     )
 
     with torch.no_grad():
