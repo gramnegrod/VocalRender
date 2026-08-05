@@ -53,19 +53,12 @@ VocalRender is built around three ideas:
 
 ![Overall architecture of VocalRender and its music-score tokenization process](assets/structure.png)
 
-## Repository layout
+## Demo inference
 
-```
-conf/               Training / inference / preprocessing YAML configs
-scripts/            Entry-point scripts (preprocess, train, infer)
-src/vocalrender/    The package (model, training, inference, evaluation)
-nanovllm-voxcpm/    Optional nano-vllm inference backend (git submodule)
-docs/               Architecture and usage documentation
-```
-
-See [docs/structure.md](docs/structure.md) for the full tree.
-
-## Installation
+This is the shortest end-to-end path: install the package, download the
+released checkpoint, and run a bundled score/prompt pair. It requires a
+CUDA-capable GPU, but **does not require editing a config, preparing a JSON
+file, or supplying your own prompt audio**.
 
 ```bash
 git clone --recurse-submodules https://github.com/pymaster17/VocalRender.git
@@ -74,56 +67,79 @@ cd VocalRender
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-# Optional: staff-notation score rendering (save_score: true)
-pip install -e ".[viz]"
-
-# Optional: nano-vllm inference backend (continuous batching)
-pip install -e ./nanovllm-voxcpm
-```
-
-## Pretrained checkpoints & tokenizer
-
-Ready-to-run **VocalRender** and **VocalRender-Pro** checkpoints are available
-from the [Hugging Face model repository](https://huggingface.co/pymaster/VocalRender).
-Each variant includes the model weights, AudioVAE, configuration, and extended
-SVS tokenizer.
-
-Download one variant into `pretrained_models/`:
-
-```bash
-# VocalRender
 hf download pymaster/VocalRender \
     --include "VocalRender/*" \
     --local-dir pretrained_models
 
-# Or VocalRender-Pro
+python scripts/infer_vocalrender_svs_single.py \
+    --ckpt_dir pretrained_models/VocalRender \
+    --json_file examples/opencpop_demo.json \
+    --item_name 2003000087 \
+    --prompt_audio examples/prompt_audio/2003000081.wav \
+    --output outputs/demo_2003000087.wav
+```
+
+The command writes a 48 kHz waveform to `outputs/demo_2003000087.wav`. The
+released model, score, and prompt pair above have been tested together from a
+clean Hugging Face download. Two additional ready-to-run pairs are bundled:
+
+| Score `item_name` | Bundled prompt audio | Prompt duration |
+|---|---|---:|
+| `2003000087` | `examples/prompt_audio/2003000081.wav` | 6.17 s |
+| `2017000646` | `examples/prompt_audio/2017000644.wav` | 4.19 s |
+| `2044001652` | `examples/prompt_audio/2044001666.wav` | 5.33 s |
+
+To use another pair, change only `--item_name`, `--prompt_audio`, and
+`--output` according to the table. The demo score contains inference fields
+only; `word_dur` and `pitch_dur` are optional visualization/evaluation
+metadata. The excerpts are selected from
+[OpenCpop](https://wenet.org.cn/opencpop/) and remain subject to its terms.
+
+Prompt audio is required because the released checkpoints were trained with
+prompt audio on every sample (`prompt_audio_prob: 1.0`). For your own scores,
+use a clean 2-8 second singing clip; it also specifies the target timbre.
+
+The larger **VocalRender-Pro** checkpoint can be used with the same command:
+
+```bash
 hf download pymaster/VocalRender \
     --include "VocalRender-Pro/*" \
     --local-dir pretrained_models
+
+# Then replace --ckpt_dir with pretrained_models/VocalRender-Pro.
 ```
 
-The resulting checkpoint paths are `pretrained_models/VocalRender` and
-`pretrained_models/VocalRender-Pro`, respectively. Each download is about
-9.5 GB. Full audio generation requires a CUDA-capable compute node.
+Each checkpoint download is about 9.5 GB.
 
-The following steps are needed only when preparing the **VoxCPM2 base model
-for training**, not when using the released VocalRender checkpoints:
+## Batch inference
 
-1. Download the **VoxCPM2** pretrained checkpoint into
-   `pretrained_models/VoxCPM2` (must contain `config.json`, model weights,
-   and the tokenizer files).
-2. Extend the tokenizer with the SVS tokens (128 pitch + 12 note-duration +
-   256 BPM tokens):
+Batch inference runs over a preprocessed validation set and writes generated
+WAVs, optional score PNGs, and `metrics_summary.json`:
 
 ```bash
-python scripts/setup_svs_tokenizer.py \
-    --tokenizer_path pretrained_models/VoxCPM2 \
-    --save_path pretrained_models/VoxCPM2   # overwrite in place, or a new dir
+python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
 ```
 
-Model embeddings are resized automatically at training start.
+Configure dataset/checkpoint paths in
+[conf/svs_infer.yaml](conf/svs_infer.yaml). Two backends are available (see
+[docs/inference_backends.md](docs/inference_backends.md)):
+`multi_gpu` is the default in-process backend with prompt-audio and score
+rendering support; `nano_vllm` provides continuous batching for faster
+metric-only runs.
 
-## Data preprocessing
+Install the corresponding optional component only when needed:
+
+```bash
+# Staff-notation score rendering (save_score: true)
+pip install -e ".[viz]"
+
+# nano-vllm inference backend
+pip install -e ./nanovllm-voxcpm
+```
+
+## Training
+
+### Data preprocessing
 
 The released training data is available as
 [CrawlSinger-OS](https://huggingface.co/datasets/pymaster/CrawlSinger-OS),
@@ -185,7 +201,24 @@ Then encode audio into AudioVAE-V2 latents (Arrow shards):
 python scripts/preprocess_svs_data.py conf/svs_preprocess.yaml
 ```
 
-## Training
+### Prepare the base checkpoint
+
+These steps are required only for training, not for demo inference:
+
+1. Download the **VoxCPM2** pretrained checkpoint into
+   `pretrained_models/VoxCPM2` (including `config.json`, model weights, and
+   tokenizer files).
+2. Extend its tokenizer with 128 pitch, 12 note-duration, and 256 BPM tokens:
+
+```bash
+python scripts/setup_svs_tokenizer.py \
+    --tokenizer_path pretrained_models/VoxCPM2 \
+    --save_path pretrained_models/VoxCPM2
+```
+
+Model embeddings are resized automatically when training starts.
+
+### Start training
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 \
@@ -199,49 +232,6 @@ Training resumes automatically from the latest checkpoint under `save_path`.
 Validation logs loss plus audio-quality metrics (SingMOS, Audiobox
 Aesthetics) and sample audio to TensorBoard.
 
-## Inference
-
-**Batch inference** over a preprocessed validation set (writes wavs,
-optional score PNGs, and `metrics_summary.json`):
-
-```bash
-python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
-```
-
-Two backends are available (`docs/inference_backends.md`):
-`multi_gpu` (default, in-process; supports prompt audio + score rendering)
-and `nano_vllm` (continuous batching, faster for metric-only runs).
-
-**Single sample** from a label JSON. Three prompt-conditioned OpenCpop demos
-are included; each score is paired with a different, non-overlapping singing
-clip from the same source song:
-
-| Score `item_name` | Prompt audio | Output example |
-|---|---|---|
-| `2003000087` | `2003000081.wav` (6.17 s) | `demo_2003000087.wav` |
-| `2017000646` | `2017000644.wav` (4.19 s) | `demo_2017000646.wav` |
-| `2044001652` | `2044001666.wav` (5.33 s) | `demo_2044001652.wav` |
-
-```bash
-python scripts/infer_vocalrender_svs_single.py \
-    --ckpt_dir pretrained_models/VocalRender \
-    --json_file examples/opencpop_demo.json \
-    --item_name 2003000087 \
-    --prompt_audio examples/prompt_audio/2003000081.wav \
-    --output demo_2003000087.wav
-```
-
-To run the other two demos, use the corresponding score/prompt pairs in the
-table. The demo score JSON intentionally contains only inference fields;
-`word_dur` and `pitch_dur` are optional visualization/evaluation metadata.
-The bundled excerpts are selected from
-[OpenCpop](https://wenet.org.cn/opencpop/) and remain subject to its terms.
-
-Prompt audio is required. The released checkpoints were trained with prompt
-audio on every sample (`prompt_audio_prob: 1.0`), so prompt-free inference is
-not supported and may substantially degrade quality. Use a clean 2-8 second
-singing clip; it also provides the target timbre.
-
 ## Metrics
 
 - **SingMOS** — singing MOS predictor (loaded via `torch.hub`, requires `s3prl`).
@@ -249,6 +239,18 @@ singing clip; it also provides the target timbre.
 - A pluggable `register_metric_backend` seam in
   `vocalrender.evaluation.svs_metrics` lets you add custom metrics without
   editing the evaluator.
+
+## Repository layout
+
+```
+conf/               Training / inference / preprocessing YAML configs
+scripts/            Entry-point scripts (preprocess, train, infer)
+src/vocalrender/    The package (model, training, inference, evaluation)
+nanovllm-voxcpm/    Optional nano-vllm inference backend (git submodule)
+docs/               Architecture and usage documentation
+```
+
+See [docs/structure.md](docs/structure.md) for the full tree.
 
 ## Acknowledgements
 

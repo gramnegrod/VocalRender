@@ -42,19 +42,11 @@ VocalRender 包含三个关键设计:
 
 ![VocalRender 整体架构与乐谱 tokenization 流程](assets/structure.png)
 
-## 仓库结构
+## Demo 推理
 
-```
-conf/               训练 / 推理 / 预处理的 YAML 配置
-scripts/            入口脚本(预处理、训练、推理)
-src/vocalrender/    核心包(模型、训练、推理、评测)
-nanovllm-voxcpm/    可选的 nano-vllm 推理后端(git 子模块)
-docs/               架构与使用文档
-```
-
-完整目录树见 [docs/structure.md](docs/structure.md)。
-
-## 安装
+这是最短的端到端复现路径:安装依赖、下载已发布 checkpoint,然后运行仓库内置的
+乐谱与 prompt 音频。生成需要支持 CUDA 的 GPU,但**无需修改配置文件、准备 JSON
+或自行提供 prompt 音频**。
 
 ```bash
 git clone --recurse-submodules https://github.com/pymaster17/VocalRender.git
@@ -63,53 +55,76 @@ cd VocalRender
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-# 可选:五线谱乐谱渲染(save_score: true)
-pip install -e ".[viz]"
-
-# 可选:nano-vllm 推理后端(连续批处理)
-pip install -e ./nanovllm-voxcpm
-```
-
-## 预训练模型与 tokenizer
-
-可直接用于推理的 **VocalRender** 与 **VocalRender-Pro** checkpoint 已发布在
-[Hugging Face 模型仓库](https://huggingface.co/pymaster/VocalRender)。每个版本均
-包含模型权重、AudioVAE、配置文件以及扩展后的 SVS tokenizer。
-
-将所需版本下载到 `pretrained_models/`:
-
-```bash
-# VocalRender
 hf download pymaster/VocalRender \
     --include "VocalRender/*" \
     --local-dir pretrained_models
 
-# 或 VocalRender-Pro
+python scripts/infer_vocalrender_svs_single.py \
+    --ckpt_dir pretrained_models/VocalRender \
+    --json_file examples/opencpop_demo.json \
+    --item_name 2003000087 \
+    --prompt_audio examples/prompt_audio/2003000081.wav \
+    --output outputs/demo_2003000087.wav
+```
+
+命令会直接生成 48 kHz 音频 `outputs/demo_2003000087.wav`。上述模型、乐谱和
+prompt 配对已通过从 Hugging Face 全新下载 checkpoint 的完整复现测试。仓库共
+提供三组可直接运行的样例:
+
+| 乐谱 `item_name` | 内置 prompt 音频 | Prompt 时长 |
+|---|---|---:|
+| `2003000087` | `examples/prompt_audio/2003000081.wav` | 6.17 秒 |
+| `2017000646` | `examples/prompt_audio/2017000644.wav` | 4.19 秒 |
+| `2044001652` | `examples/prompt_audio/2044001666.wav` | 5.33 秒 |
+
+运行其他样例时只需按照表格替换 `--item_name`、`--prompt_audio` 和 `--output`。
+Demo JSON 仅保留推理字段;`word_dur` 和 `pitch_dur` 是用于可视化和评测的可选
+元数据。内置片段选自 [OpenCpop](https://wenet.org.cn/opencpop/),仍遵循其原始
+使用条款。
+
+Prompt 音频是必需输入:已发布 checkpoint 的所有训练样本均使用 prompt 音频
+(`prompt_audio_prob: 1.0`)。使用自定义乐谱时,请提供 2-8 秒的干净歌声片段,
+它也用于指定目标音色。
+
+更大的 **VocalRender-Pro** checkpoint 使用相同的推理命令:
+
+```bash
 hf download pymaster/VocalRender \
     --include "VocalRender-Pro/*" \
     --local-dir pretrained_models
+
+# 然后将 --ckpt_dir 替换为 pretrained_models/VocalRender-Pro。
 ```
 
-对应的 checkpoint 路径分别为 `pretrained_models/VocalRender` 和
-`pretrained_models/VocalRender-Pro`。每个版本约需下载 9.5 GB;完整音频生成
-需要在支持 CUDA 的计算节点上运行。
+每个 checkpoint 约需下载 9.5 GB。
 
-以下步骤仅用于准备**训练所需的 VoxCPM2 基础模型**,使用已经发布的
-VocalRender checkpoint 推理时无需执行:
+## 批量推理
 
-1. 将 **VoxCPM2** 预训练 checkpoint 下载到 `pretrained_models/VoxCPM2`
-   (需包含 `config.json`、模型权重以及 tokenizer 文件)。
-2. 为 tokenizer 扩展 SVS token(128 个音高 + 12 个音符时值 + 256 个 BPM token):
+批量推理在预处理好的验证集上运行,输出生成的 WAV、可选乐谱 PNG 以及
+`metrics_summary.json`:
 
 ```bash
-python scripts/setup_svs_tokenizer.py \
-    --tokenizer_path pretrained_models/VoxCPM2 \
-    --save_path pretrained_models/VoxCPM2   # 原地覆盖,或指定新目录
+python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
 ```
 
-模型 embedding 会在训练开始时自动 resize。
+在 [conf/svs_infer.yaml](conf/svs_infer.yaml) 中配置数据集和 checkpoint 路径。
+提供两种后端(详见 [docs/inference_backends.md](docs/inference_backends.md)):
+`multi_gpu` 是默认的进程内后端,支持 prompt 音频与乐谱渲染;
+`nano_vllm` 通过连续批处理加速仅计算指标的任务。
 
-## 数据预处理
+仅在需要对应功能时安装可选组件:
+
+```bash
+# 五线谱乐谱渲染(save_score: true)
+pip install -e ".[viz]"
+
+# nano-vllm 推理后端
+pip install -e ./nanovllm-voxcpm
+```
+
+## 训练
+
+### 数据预处理
 
 训练数据已发布在
 [CrawlSinger-OS](https://huggingface.co/datasets/pymaster/CrawlSinger-OS),
@@ -168,7 +183,23 @@ prompt 构建或模型训练。必需的乐谱字段为 `word`、`pitch`、`note
 python scripts/preprocess_svs_data.py conf/svs_preprocess.yaml
 ```
 
-## 训练
+### 准备基础模型
+
+以下步骤仅用于训练,Demo 推理无需执行:
+
+1. 将 **VoxCPM2** 预训练 checkpoint 下载到 `pretrained_models/VoxCPM2`
+   (需包含 `config.json`、模型权重以及 tokenizer 文件)。
+2. 为 tokenizer 扩展 128 个音高、12 个音符时值和 256 个 BPM token:
+
+```bash
+python scripts/setup_svs_tokenizer.py \
+    --tokenizer_path pretrained_models/VoxCPM2 \
+    --save_path pretrained_models/VoxCPM2
+```
+
+模型 embedding 会在训练开始时自动 resize。
+
+### 开始训练
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 \
@@ -182,40 +213,24 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 \
 验证阶段会将 loss 及音质指标(SingMOS、Audiobox Aesthetics)和采样音频记录到
 TensorBoard。
 
-## 推理
-
-**批量推理**(在预处理好的验证集上运行,输出 wav、可选的乐谱 PNG 以及
-`metrics_summary.json`):
-
-```bash
-python scripts/infer_vocalrender_svs.py --config_path conf/svs_infer.yaml
-```
-
-提供两种后端(详见 `docs/inference_backends.md`):
-`multi_gpu`(默认,进程内;支持 prompt 音频 + 乐谱渲染)和
-`nano_vllm`(连续批处理,仅算指标时更快)。
-
-**单条推理**(从一个 label JSON):
-
-```bash
-python scripts/infer_vocalrender_svs_single.py \
-    --ckpt_dir pretrained_models/VocalRender \
-    --json_file examples/inference_input.json \
-    --item_name demo \
-    --prompt_audio path/to/2-8s_prompt.wav \
-    --output svs_output.wav
-```
-
-推理必须提供 prompt 音频。已发布 checkpoint 的所有训练样本均使用 prompt 音频
-(`prompt_audio_prob: 1.0`),因此不支持可能导致明显质量劣化的无 prompt 推理。
-建议使用 2-8 秒的干净歌声片段,它同时用于指定目标音色。
-
 ## 评测指标
 
 - **SingMOS** —— 歌声 MOS 预测器(通过 `torch.hub` 加载,需要 `s3prl`)。
 - **AES** —— Audiobox Aesthetics 维度(CE = 内容愉悦度,PQ = 制作质量)。
 - `vocalrender.evaluation.svs_metrics` 中提供可插拔的 `register_metric_backend`
   接口,无需修改评测器即可添加自定义指标。
+
+## 仓库结构
+
+```
+conf/               训练 / 推理 / 预处理的 YAML 配置
+scripts/            入口脚本(预处理、训练、推理)
+src/vocalrender/    核心包(模型、训练、推理、评测)
+nanovllm-voxcpm/    可选的 nano-vllm 推理后端(git 子模块)
+docs/               架构与使用文档
+```
+
+完整目录树见 [docs/structure.md](docs/structure.md)。
 
 ## 致谢
 
