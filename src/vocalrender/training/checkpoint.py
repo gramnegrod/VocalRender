@@ -9,6 +9,7 @@ state, and extended SVS tokenizer.
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -302,12 +303,40 @@ def save_checkpoint(
     # and works across NFS / GPFS mounts (relative target stays valid if
     # the parent directory is moved).
     latest_link = save_dir / "latest"
-    try:
-        if latest_link.is_symlink() or latest_link.exists():
-            if latest_link.is_dir() and not latest_link.is_symlink():
-                shutil.rmtree(latest_link)  # clean up old copytree-style dirs
-            else:
+
+    def _clear_latest() -> None:
+        """Remove the existing ``latest`` pointer without following it.
+
+        A Windows directory junction -- which the fallback below creates --
+        reports ``is_dir() == True`` and ``is_symlink() == False``, so the
+        naive "it is a real directory, rmtree it" branch would recurse
+        *through* the junction and delete the checkpoint it points at. That is
+        a silent destroyer of a permanent checkpoint, so reparse points are
+        detected explicitly and unlinked as links, never walked.
+        """
+        if not (latest_link.is_symlink() or latest_link.exists()):
+            return
+        is_reparse = False
+        if os.name == "nt":
+            try:
+                is_reparse = bool(
+                    os.lstat(latest_link).st_file_attributes
+                    & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                )
+            except (OSError, AttributeError):
+                is_reparse = False
+        if latest_link.is_symlink() or is_reparse:
+            try:
                 latest_link.unlink()
+            except (OSError, PermissionError):
+                os.rmdir(latest_link)  # junctions unlink as empty directories
+        elif latest_link.is_dir():
+            shutil.rmtree(latest_link)  # genuine old copytree-style dir
+        else:
+            latest_link.unlink()
+
+    try:
+        _clear_latest()
         latest_link.symlink_to(tag)  # relative: latest -> step_0050000
         log(f"[Checkpoint] Updated 'latest' symlink -> {tag}")
     except OSError as e:
@@ -320,6 +349,7 @@ def save_checkpoint(
         made = False
         if os.name == "nt":
             try:
+                _clear_latest()  # mklink refuses to overwrite an existing name
                 subprocess.run(
                     ["cmd", "/c", "mklink", "/J", str(latest_link), str(save_dir / tag)],
                     check=True, capture_output=True,
