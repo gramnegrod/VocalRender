@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Storm Research: Making VocalRender Sing English — The Path Forward</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --blue: #2563eb; --blue-dark: #1e3a8a; --ink: #16203a; --muted: #5b6677; --line: #e4e9f2;
+    --bg-soft: #f6f8fc; --green: #15803d; --green-bg: #e9f6ee; --amber: #b45309; --amber-bg: #fdf3e7;
+    --slate: #475569; --slate-bg: #eef1f6; --red: #b91c1c; --red-bg: #fdecec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Roboto', system-ui, sans-serif; color: var(--ink); background: #eef1f6; line-height: 1.62; font-weight: 400; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; background: #fff; padding: 64px 72px 80px; box-shadow: 0 1px 40px rgba(22,32,58,0.08); }
+  .eyebrow { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; }
+  h1 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 40px; line-height: 1.12; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 18px; }
+  .lede { font-size: 17px; color: var(--muted); max-width: 640px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px; padding-top: 22px; border-top: 2px solid var(--line); font-family: 'Roboto Mono', monospace; font-size: 12px; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 600; }
+  .verify-banner { margin-top: 22px; background: var(--green-bg); border: 1px solid #bfe3cc; border-radius: 8px; padding: 13px 18px; font-size: 13px; color: #14532d; display: flex; gap: 10px; align-items: baseline; }
+  .verify-banner b { font-weight: 700; }
+  .verify-banner .tag { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: var(--green); color: #fff; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+  .howto { margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; padding: 18px 22px; background: var(--bg-soft); }
+  .howto h4 { font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .howto ul { list-style: none; }
+  .howto li { font-size: 13.5px; color: #2b3950; margin-bottom: 7px; padding-left: 16px; position: relative; }
+  .howto li::before { content: "›"; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
+  .section { margin-top: 56px; }
+  .section-num { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; color: var(--blue); letter-spacing: 0.05em; }
+  h2 { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 25px; letter-spacing: -0.01em; color: var(--ink); margin: 6px 0 18px; line-height: 1.2; }
+  h2 .bar { display: inline-block; width: 38px; height: 4px; background: var(--blue); border-radius: 2px; vertical-align: middle; margin-right: 14px; }
+  p { margin-bottom: 14px; }
+  p.body-lg { font-size: 16.5px; }
+  .ceo { background: var(--bg-soft); border-left: 5px solid var(--blue); padding: 26px 30px; border-radius: 4px; font-size: 16.5px; }
+  .ceo strong { font-weight: 700; color: var(--blue-dark); }
+  .finding { border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px; margin-bottom: 18px; position: relative; }
+  .finding-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+  .finding-title { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; line-height: 1.3; color: var(--ink); flex: 1; }
+  .finding-rank { font-family: 'Roboto Mono', monospace; font-weight: 600; font-size: 13px; color: #fff; background: var(--ink); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .finding p { font-size: 15px; color: #283449; margin-bottom: 14px; }
+  .rel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .rel { display: inline-flex; align-items: center; gap: 9px; font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 20px; }
+  .rel.high { background: #e7f0fe; color: var(--blue); }
+  .rel.medhigh { background: var(--green-bg); color: var(--green); }
+  .rel.medium { background: var(--amber-bg); color: var(--amber); }
+  .rel.low { background: var(--red-bg); color: var(--red); }
+  .score { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .score b { font-size: 17px; }
+  .score span { color: var(--muted); font-weight: 400; }
+  .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .chip-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; font-size: 13.5px; }
+  .chip-label { font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .chip-label.sup { background: var(--green-bg); color: var(--green); }
+  .chip-label.chal { background: var(--red-bg); color: var(--red); }
+  .chip-label.fix { background: var(--amber-bg); color: var(--amber); }
+  .chip-row span.who { color: #2b3950; }
+  .chip-row span.who b { font-weight: 600; }
+  .contested { border: 1px dashed var(--amber); background: #fffaf2; border-radius: 10px; padding: 22px 26px; margin-bottom: 18px; }
+  .contested .tag { font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); }
+  .contested h4 { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); margin: 6px 0 10px; }
+  .contested p { font-size: 14px; color: #4a3a22; margin-bottom: 0; }
+  .connection { background: linear-gradient(135deg, #16203a 0%, #1e3a8a 100%); color: #eaf0fb; border-radius: 12px; padding: 34px 38px; }
+  .connection h2 { color: #fff; }
+  .connection h2 .bar { background: #6ea8ff; }
+  .connection .section-num { color: #9ec1ff; }
+  .connection p { color: #d3def3; font-size: 16px; }
+  .connection .punch { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 18px; color: #fff; line-height: 1.4; margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.18); }
+  .assume { border: 1px solid var(--line); border-left: 5px solid var(--amber); border-radius: 6px; padding: 24px 28px; background: #fffdf9; }
+  .assume h3 { font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+  .assume p { font-size: 15px; color: #3a3320; }
+  .assume p:last-child { margin-bottom: 0; }
+  .action-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .action-item:last-child { border-bottom: none; }
+  .action-mark { font-family: 'Roboto Mono', monospace; font-weight: 600; font-size: 13px; color: var(--blue); flex-shrink: 0; width: 34px; }
+  .action-item .do { font-weight: 600; color: var(--ink); }
+  .action-item p { font-size: 14.5px; margin-bottom: 0; color: #2b3950; }
+  .frontier { border: 2px dashed var(--blue); border-radius: 12px; padding: 30px 34px; background: var(--bg-soft); }
+  .frontier .q { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 22px; line-height: 1.32; color: var(--blue-dark); margin-bottom: 16px; }
+  .frontier p { font-size: 15px; color: #2b3950; }
+  .oncam { margin-top: 18px; }
+  .oncam-col { border-radius: 10px; padding: 20px 24px; margin-bottom: 14px; }
+  .oncam-col.safe { background: var(--green-bg); border: 1px solid #bfe3cc; }
+  .oncam-col.caveat { background: var(--amber-bg); border: 1px solid #f0d9b5; }
+  .oncam-col.avoid { background: var(--red-bg); border: 1px solid #f3c9c9; }
+  .oncam-col h4 { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .oncam-col.safe h4 { color: var(--green); }
+  .oncam-col.caveat h4 { color: var(--amber); }
+  .oncam-col.avoid h4 { color: var(--red); }
+  .oncam-col ul { list-style: none; }
+  .oncam-col li { font-size: 14px; color: #233; margin-bottom: 8px; padding-left: 16px; position: relative; line-height: 1.5; }
+  .oncam-col li::before { content: "•"; position: absolute; left: 0; font-weight: 700; }
+  .oncam-col.safe li::before { color: var(--green); }
+  .oncam-col.caveat li::before { color: var(--amber); }
+  .oncam-col.avoid li::before { color: var(--red); }
+  .refs { margin-top: 56px; padding-top: 26px; border-top: 2px solid var(--line); }
+  .refs h3 { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .refs ul { list-style: none; }
+  .refs li { font-size: 12.5px; color: var(--muted); margin-bottom: 11px; padding-left: 16px; position: relative; line-height: 1.5; }
+  .refs li::before { content: "›"; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
+  .refs a { color: #34507e; text-decoration: none; }
+  .refs a:hover { text-decoration: underline; }
+  .refs .vstat { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+  .vstat.ok { background: var(--green-bg); color: var(--green); }
+  .vstat.part { background: var(--amber-bg); color: var(--amber); }
+  .vstat.weak { background: var(--red-bg); color: var(--red); }
+  .footer { margin-top: 40px; font-family: 'Roboto Mono', monospace; font-size: 11px; color: #9aa6b8; text-align: center; }
+  @media (max-width: 640px) { .page { padding: 40px 24px 56px; } h1 { font-size: 30px; } }
+  @media print { body { background: #fff; } .page { box-shadow: none; max-width: 100%; padding: 0; } .connection, .oncam-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+  /* --- additions: TOC, data tables, inline code --- */
+  .toc { margin-top: 24px; border: 1px solid var(--line); border-radius: 8px; padding: 20px 24px; background: #fff; }
+  .toc h4 { font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .toc ol { margin-left: 18px; }
+  .toc li { font-size: 14px; margin-bottom: 6px; }
+  .toc a { color: #34507e; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .tablewrap { overflow-x: auto; margin: 18px 0 22px; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 640px; }
+  th { background: var(--bg-soft); font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); color: #283449; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: 'Roboto Mono', monospace; text-align: right; white-space: nowrap; }
+  .pill { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .pill.yes { background: var(--green-bg); color: var(--green); }
+  .pill.no { background: var(--red-bg); color: var(--red); }
+  .pill.part { background: var(--amber-bg); color: var(--amber); }
+  code { font-family: 'Roboto Mono', monospace; font-size: 0.88em; background: var(--slate-bg); padding: 1px 5px; border-radius: 3px; }
+  h3.sub { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; color: var(--ink); margin: 28px 0 10px; }
+  .gap { border-left: 4px solid var(--slate); background: var(--slate-bg); padding: 16px 20px; border-radius: 4px; margin: 16px 0; font-size: 14.5px; }
+  .gap b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Storm Research &middot; deep mode &middot; follow-up</div>
+    <h1>The Demo Is Real. The Path Isn&rsquo;t the One We Were On.</h1>
+    <p class="lede">Seven branches on one question: how does a solo practitioner actually get VocalRender to sing good English &mdash; and should they even try? Several findings turned out to reinterpret each other, and two reverse earlier advice.</p>
+    <div class="meta-row">
+      <span><b>Date</b> &nbsp;2026-08-10</span>
+      <span><b>Queries</b> &nbsp;88 (22 blocked by session cap)</span>
+      <span><b>Ledger</b> &nbsp;116 rows</span>
+      <span><b>Audience</b> &nbsp;One practitioner, RTX 4070 12&nbsp;GB</span>
+    </div>
+    <div class="verify-banner">
+      <span class="tag">Verified</span>
+      <span>67 findings graded: <b>38 safe to assert, 24 with caveat, 5 do-not-assert.</b> This run <b>retracts the previous run&rsquo;s headline recommendation</b> and reverses a decision made yesterday. Four of seven branches were truncated by an exhausted search budget &mdash; see &sect;09.</span>
+    </div>
+    <div class="toc">
+      <h4>Contents</h4>
+      <ol>
+        <li><a href="#s1">The 60-second answer</a></li>
+        <li><a href="#s2">Six findings that change the plan</a></li>
+        <li><a href="#s3">The hidden connection</a></li>
+        <li><a href="#s4">The five questions, answered</a></li>
+        <li><a href="#s5">What to actually do</a></li>
+        <li><a href="#s6">What&rsquo;s safe to assert</a></li>
+        <li><a href="#s7">Retracted and rejected</a></li>
+        <li><a href="#s8">The frontier question</a></li>
+        <li><a href="#s9">Limits of this run</a></li>
+        <li><a href="#refs">Evidence base</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <section class="section" id="s1">
+    <div class="section-num">01</div>
+    <h2><span class="bar"></span>The 60-Second Answer</h2>
+    <div class="ceo">
+      <p style="margin-bottom:0;">The instinct that this <em>should</em> work because the Mandarin demo is excellent is half right and half a trap: the architecture plainly can sing, but three things had to be true for the current plan to succeed and none of them are. <strong>GTSinger&rsquo;s English is not 12.7 hours from 3 singers &mdash; it is 6.71 hours of actual singing from 3 singers, two of whom are altos, so in generalisation terms it is closer to two voices than to twelve hours.</strong> The fix recommended by the previous research pass &mdash; unify the phoneme frontend, as five other systems did &mdash; has no attachment point here, because VoxCPM2 is tokenizer-free and takes raw text, so there is no phone inventory to unify. And the signal used to stop training yesterday carries almost no information: the optimal diffusion loss is a nonzero, data-dependent constant, so a flat 0.4884 cannot distinguish saturation from convergence from undertraining, and the closest published analogue found validation loss and perceptual quality moving in <em>opposite</em> directions. Meanwhile nobody &mdash; not one person &mdash; has ever published a cross-lingual VoxCPM finetune or an English checkpoint for any Chinese-origin singing model, so there is no recipe to copy and no evidence the low-data path is quietly working elsewhere. The one genuinely encouraging precedent, BiSinger, got bilingual Chinese/English singing from just <b>1.91 hours of real English singing</b> &mdash; by manufacturing 38 hours more with voice conversion and pitch-shifting English speech into pseudo-singing. And a model that already does the whole job exists: SoulX-Singer is Apache-2.0, natively English, takes MIDI scores, and clones timbre zero-shot &mdash; though its quality claims are entirely self-reported.</p>
+    </div>
+  </section>
+
+  <section class="section" id="s2">
+    <div class="section-num">02</div>
+    <h2><span class="bar"></span>Six Findings That Change the Plan</h2>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">The English data is roughly half what we thought, from effectively two voices</div><div class="finding-rank">1</div></div>
+      <div class="rel-row"><div class="rel high">Reliability: High</div><div class="score"><b>9</b><span>/10</span></div></div>
+      <p>GTSinger&rsquo;s own NeurIPS Datasets &amp; Benchmarks paper states the English portion is <b>13.13&nbsp;h total but only 6.71&nbsp;h of actual singing</b>, from three singers: EN-Tenor-1, EN-Alto-1, EN-Alto-2. <b>Two of the three are the same voice type.</b> Every source that tiers data requirements puts multi-singer generalisation in a new language at 30&ndash;100&nbsp;h and 10&ndash;30 speakers minimum; 2026 SOTA (DiTSinger) used 530&nbsp;h from 40 vocalists. The deficits multiply rather than trade off &mdash; and the field&rsquo;s own guidance is that adding a <em>speaker</em> helps generalisation more than adding hours from an existing one.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Skeptic lens &mdash; <b>arXiv 2409.13832v5</b> (GTSinger, primary); corroborated by SingNet and DiTSinger</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">The 15&ndash;30&nbsp;min German DiffSinger result &mdash; but that is a single-singer voicebank task, not open-domain generation</span></div>
+        <div class="chip-row"><span class="chip-label fix">Corrected</span><span class="who">&ldquo;12.7&nbsp;h of English&rdquo; &rarr; 6.71&nbsp;h of singing across ~2 timbre classes</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">The phoneme-frontend fix does not apply to this model</div><div class="finding-rank">2</div></div>
+      <div class="rel-row"><div class="rel high">Reliability: High</div><div class="score"><b>9</b><span>/10</span></div></div>
+      <p>The previous run&rsquo;s strongest recommendation was to unify the phoneme representation, on the convergent evidence of DiaMoE-TTS, Transinger, BiSinger, CrossSinger and XTTS. The effect sizes are enormous where they apply &mdash; DiaMoE-TTS measures <b>WER 90&ndash;93&nbsp;% with a pinyin frontend versus 29&ndash;49&nbsp;% with unified IPA</b>, all else equal. But <b>VoxCPM2 is tokenizer-free</b>: it consumes raw text, has no phoneme layer, needs no language tags, and already covers 30 languages including English. VocalRender adds only 396 score tokens on top of a Llama BPE tokenizer. <b>There is no phone inventory to unify, so the intervention with the largest published effect size is inapplicable rather than merely untried.</b> Adding a phoneme frontend to a tokenizer-free model is a research project, not a fix.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner lens &mdash; <b>OpenBMB/VoxCPM</b> official repo; VocalRender <code>setup_svs_tokenizer.py</code> code read</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one &mdash; but nobody has published on frontend intervention for tokenizer-free TTS either</span></div>
+        <div class="chip-row"><span class="chip-label fix">Corrected</span><span class="who"><b>Retracts the previous run&rsquo;s headline recommendation.</b> It generalised from architectures that do not match this one</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">Stopping the training run on flat loss was a mistake</div><div class="finding-rank">3</div></div>
+      <div class="rel-row"><div class="rel medhigh">Reliability: Medium-high</div><div class="score"><b>8</b><span>/10</span></div></div>
+      <p>Three independent mechanisms say the number carried almost no information. The <b>optimal diffusion loss is nonzero and dataset-dependent</b>, so a flat value cannot distinguish &ldquo;hit capacity&rdquo; from &ldquo;converged to the irreducible optimum&rdquo; from &ldquo;still undertrained&rdquo; &mdash; and the loss-gap-to-quality correlation <em>changes sign</em> across noise levels. Timestep gradient variance spans up to <b>100&times;</b>, so a ~32-sample batch mean stabilises to four decimals long before learning stops. And the closest published analogue &mdash; LoRA on an LLM-based TTS backbone at 3.5&ndash;18.5&nbsp;h per speaker, bracketing our 12.7&nbsp;h &mdash; found <b>validation loss improving while DNS-MOS degraded</b>, concluding that checkpoint selection &ldquo;must be guided by perceptual evaluation rather than loss convergence alone.&rdquo; The rising stop-head loss cited as the second reason is a known pathology of a one-positive-frame-per-utterance classifier. <b>Capped at 8 because this shows the decision was unfounded, not that the model was still improving.</b> Improved DDPM genuinely documents diffusion degrading with long training &mdash; detected by FID, not loss.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Academic lens &mdash; <b>arXiv 2506.13763</b>; <b>arXiv 2603.10904</b>; Improved DDPM; Min-SNR</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">Improved DDPM&rsquo;s early-stopping recommendation &mdash; the honest counterweight</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">A model that already does the entire job exists</div><div class="finding-rank">4</div></div>
+      <div class="rel-row"><div class="rel medium">Reliability: Medium</div><div class="score"><b>6</b><span>/10</span></div></div>
+      <p><b>SoulX-Singer</b> (Soul AI Lab, Feb 2026): Apache-2.0 weights, trained on <b>&gt;42,000&nbsp;h</b> of vocal data, natively supports <b>Mandarin, English and Cantonese</b>, accepts <b>MIDI score or F0 melody conditioning</b>, and does <b>zero-shot timbre from a reference clip</b>. That is every requirement of this project, in a model that already speaks English, with no training required &mdash; and it consumes the existing annotation pipeline&rsquo;s output format directly. <b>Scored only 6 because the caveats are serious:</b> the quality claims are self-reported on its own benchmark with no independent replication, adoption is low (~1,000 downloads/month), it is three months old, and the repo is inference-only with no training code. It is a strong lead, not a verified answer.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner lens &mdash; HF model card + tech report (both first-party)</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">Absence of any third-party evaluation. Nothing here is independently confirmed</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">Nobody has ever done this &mdash; and the one who came closest manufactured the data</div><div class="finding-rank">5</div></div>
+      <div class="rel-row"><div class="rel medhigh">Reliability: Medium-high</div><div class="score"><b>8</b><span>/10</span></div></div>
+      <p>Zero cross-lingual VoxCPM/VoxCPM2 finetunes exist publicly &mdash; no checkpoint, no writeup, no metrics, and both direct questions to the maintainers went unanswered. No community English checkpoint exists for <em>any</em> Chinese-origin singing model. The vendor&rsquo;s &ldquo;500+&nbsp;hours for a new language&rdquo; has never been validated by anyone. The one real precedent is academic: <b>BiSinger</b> built bilingual Chinese/English singing from just <b>1.91&nbsp;h of real English singing</b> &mdash; by expanding it to 38.2&nbsp;h with singing-voice conversion across 20 target singers, and separately pitch-shifting 5.68&nbsp;h of English <em>speech</em> into 17.5&nbsp;h of pseudo-singing. Its frontend change was worth +0.09 MOS; <b>the augmentation did the heavy lifting.</b> This is the most encouraging finding in the run and it points at data manufacture, not data collection.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner + academic &mdash; exhaustive GitHub/HF sweep; <b>BiSinger, ASRU 2023</b> Table 8</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">Survivorship bias cuts both ways &mdash; failed hobbyist attempts are never indexed either</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head"><div class="finding-title">The measuring instrument is as noisy as the thing being measured</div><div class="finding-rank">6</div></div>
+      <div class="rel-row"><div class="rel high">Reliability: High</div><div class="score"><b>9</b><span>/10</span></div></div>
+      <p>Whisper&rsquo;s own error rate on <b>sung</b> audio is <b>35&ndash;45&nbsp;% WER</b> (Jam-ALT: large-v2 35.7&nbsp;%, large-v3 35.5&nbsp;%, English v3 37.7&nbsp;%) &mdash; the same magnitude as our entire measured signal of 41&ndash;46&nbsp;%. Vocal separation generally made it <em>worse</em>. Two careful <b>human</b> reference versions of the same lyrics differ by <b>11.1&nbsp;% WER</b>; our references are unverified Whisper output, so they are worse than that. At WER&nbsp;&asymp;&nbsp;0.45 over 141 words the binomial standard error alone is <b>&plusmn;4.2&nbsp;pp per run</b>, before within-utterance clustering &mdash; which precisely predicts the 29.79/56.74 swing observed on one model. Real papers use 802&ndash;2,000 items; F5-TTS averages three seeds; VocalRender itself pins no seed and states no item count.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Academic lens &mdash; <b>Jam-ALT</b>; <b>arXiv 2510.06927</b>; <b>arXiv 2607.08256</b>; SEED-TTS-eval; F5-TTS</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one. No published minimum-eval-size guidance for objective TTS/SVS metrics exists at all</span></div>
+      </div>
+    </div>
+
+    <div class="contested">
+      <div class="tag">Contested signal &middot; monitor, do not assert &middot; confidence 4/10</div>
+      <h4>&ldquo;15&ndash;30 minutes is enough for cross-lingual singing transfer&rdquo;</h4>
+      <p>A BA thesis reports English&rarr;German DiffSinger transfer at 15 and 30 minutes performing &ldquo;comparable or even better&rdquo; than large-scale monolingual training. It is the smallest successful cross-lingual singing adaptation on record and it is tempting &mdash; but the PDF would not parse, the numbers are unverified, and the task class is different: one target singer, an explicit phoneme mapping, a small acoustic model, reconstruction metrics. VocalRender&rsquo;s goal is open-domain prompt-conditioned generation of arbitrary English lyrics from a 2.3B codec LM. <b>Do not plan around the 15-minute number.</b></p>
+    </div>
+  </section>
+
+  <section class="section" id="s3">
+    <div class="connection">
+      <div class="section-num">03</div>
+      <h2><span class="bar"></span>The Hidden Connection</h2>
+      <p>Four results looked like separate disappointments: a 151M-parameter bug whose fix changed nothing measurable, a loss that went flat almost immediately, an evaluation that cannot separate any condition, and a rank increase that bought nothing.</p>
+      <p>They are one result seen four ways. Every one of them is what it looks like when <em>the data, not the training, is the binding constraint</em>. Fixing a bug in a system that has already extracted everything 6.71 hours from two voice types contains produces exactly zero measurable change &mdash; which is precisely what happened. The loss flattens because the model reached the irreducible optimum <em>for that data</em>. The evaluation cannot separate conditions because the conditions genuinely differ by less than its resolution. And the rank increase does nothing because capacity was never the limit.</p>
+      <p class="punch">Every failure this project has hit is the same failure wearing a different mask &mdash; which is oddly good news, because it means there is one problem to solve rather than four, and BiSinger already showed it can be solved by manufacturing data rather than finding it.</p>
+    </div>
+  </section>
+
+  <section class="section" id="s4">
+    <div class="section-num">04</div>
+    <h2><span class="bar"></span>The Five Questions, Answered</h2>
+
+    <h3 class="sub">Q1 &mdash; What do the authors say?</h3>
+    <p>Almost nothing. One sentence, in HuggingFace discussion #1: <em>&ldquo;We just train the model on Chinese because of data and computing limitation. You may train your own checkpoint with target language.&rdquo;</em> No roadmap, no recipe, no planned English checkpoint. The repo has one issue, zero replies, zero PRs, and 16 commits none of which touch multilingual work. The paper has no v2 and does not list language as a limitation. No Chinese-language write-up exists anywhere.</p>
+    <p>The useful guidance comes from the <em>base</em> model&rsquo;s maintainers instead, and three items are directly relevant: upstream VoxCPM2&rsquo;s default LoRA config is <b>r=32, &alpha;=32, LM+DiT, LR 1e-4, 1,000 iterations</b> &mdash; so our &ldquo;plateau by step 1000&rdquo; matches the vendor&rsquo;s intended schedule rather than signalling failure; a maintainer describes <b>stop-loss converging far faster than diffusion loss</b> as a known failure mode with known fixes, which is exactly our symptom; and another prescribes <b>mixing original-language data and building code-switched utterances</b> to prevent forgetting.</p>
+
+    <h3 class="sub">Q2 &mdash; What has the community achieved?</h3>
+    <p>For this model, nothing at all. For the neighbours, the pattern is consistent: every successful cross-lingual recipe makes the phone or vocab set an explicit first step, and every documented failure is phonetic or catastrophic rather than merely low-fidelity &mdash; 15&nbsp;h Turkish gave &ldquo;just unintelligible noise&rdquo;, ~60&nbsp;h gave output that &ldquo;did not resemble English at all&rdquo;, a Czech from-scratch attempt died on &ldquo;wrong reading of J&rdquo;. Four-for-four in each direction, correlational, and none of it transfers cleanly to a tokenizer-free base.</p>
+
+    <h3 class="sub">Q3 &mdash; How do you build an evaluation that works?</h3>
+    <p>Concretely, from the papers: <b>&ge;300 distinct segments and &ge;2,500 reference words per condition</b> (real papers use 802&ndash;2,000 items); <b>deduplicate</b> &mdash; five identical lyric lines means our effective n was ~11, not 15; <b>pin the seed and average &ge;3 seeds</b>, the F5-TTS protocol; report <b>CER as headline with WER alongside</b>, since CER is materially more stable on short utterances; test significance with a <b>blockwise bootstrap on the difference</b>, blocked by song, 1,000 replicates, 95&nbsp;% CI, using the existing open implementation; <b>replace ASR references with verified lyrics</b>, or adopt SoulX-Singer&rsquo;s reconciliation against the written lyric; and transcribe with <b>two ASR families</b>, since evaluator choice alone can reverse rankings. Under that rule the current base/r16/r32 result is correctly reported as &ldquo;no measurable difference&rdquo; &mdash; which was the honest finding.</p>
+
+    <h3 class="sub">Q4 &mdash; Which intervention is right?</h3>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Intervention</th><th>Evidence</th><th>Applies here?</th></tr></thead>
+      <tbody>
+        <tr><td><b>Diagnose before training</b> &mdash; audio-evaluate existing checkpoints; probe for English forgetting</td><td>Strong (loss is uninformative; forgetting mechanism established)</td><td><b>Yes &mdash; first</b></td></tr>
+        <tr><td><b>Manufacture data</b> &mdash; SVC + pitch-shifted English speech as pseudo-singing</td><td>Strong (BiSinger 1.91&nbsp;h&rarr;38&nbsp;h; DiTSinger 500&nbsp;h synthetic; VocalRender&rsquo;s own 87&nbsp;% synthetic)</td><td><b>Yes</b></td></tr>
+        <tr><td><b>Two-stage + replay</b> &mdash; mix Mandarin singing / English speech into the finetune</td><td>Strong by analogy; explicitly prescribed by a VoxCPM maintainer</td><td><b>Yes</b></td></tr>
+        <tr><td>Unfreeze more than LoRA (embedding + head + top/bottom layers, LR ~5e-6)</td><td>Moderate; LoRA gives no forgetting advantage over full FT</td><td>Maybe</td></tr>
+        <tr><td>Phoneme/IPA frontend</td><td>Largest published effect size of anything</td><td><b>No &mdash; no phoneme layer exists</b></td></tr>
+        <tr><td>Embedding-only retraining</td><td>Established for monolingual bases; &ldquo;poor results when transferring a multilingual model&rdquo;</td><td><b>No</b></td></tr>
+        <tr><td>More collected English singing</td><td>Weak standalone; hours range 0.4&ndash;500 with no predictive power</td><td>Not the lever</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 class="sub">Q5 &mdash; Is this achievable at all?</h3>
+    <p><b>Not as originally framed.</b> Continuing to finetune 2.3B parameters on 6.71&nbsp;h from two timbre classes is the one option the evidence rules out. Every published multilingual singing success &mdash; TCSinger 2, Transinger, SoulX-Singer &mdash; got there by multilingual pretraining <em>from the start</em>, not by adding a language afterward. Accent is recoverable from multilingual model internals and is mitigated by accent <em>diversity</em>, which three singers cannot supply, so a persistent Mandarin-inflected English is the expected outcome even if everything else goes right.</p>
+    <p><b>But two narrower framings are live, and both are supported.</b> First, use a model that already sings English &mdash; SoulX-Singer takes the exact data format and needs no training. Second, if training is the point, do what BiSinger did: manufacture the data rather than collect it, and mix original-language data back in. The honest reading is that the goal is reachable and the <em>method</em> was wrong &mdash; not that the goal is impossible.</p>
+  </section>
+
+  <section class="section" id="s5">
+    <div class="section-num">05</div>
+    <h2><span class="bar"></span>What To Actually Do</h2>
+    <p class="body-lg" style="color:var(--muted);">Ordered so the cheapest things that could change the plan come first. Steps 1&ndash;3 cost hours, not days.</p>
+
+    <div class="action-item"><div class="action-mark">01</div><div><span class="do">Try SoulX-Singer before writing another line of training code.</span>
+    <p>Apache-2.0, English-native, takes MIDI scores, zero-shot timbre. Feed it one of the existing annotated songs and a reference clip. If it sounds good, the entire finetuning programme is unnecessary and the remaining work is a pipeline, not a research project. If it sounds bad, that is worth knowing in an afternoon rather than a month. Its claims are self-reported, so this is a test, not an endorsement.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">02</div><div><span class="do">Listen to the checkpoints already on disk.</span>
+    <p>The step-1000, 1500 and 2000 adapters were judged on a signal that carries almost no information. Render the same phrases from all three plus base, and listen. This directly tests whether &ldquo;saturates at 1000 steps&rdquo; was ever true, and may reverse the stop decision.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">03</div><div><span class="do">Probe for English forgetting &mdash; a 20-minute experiment.</span>
+    <p>Run the Mandarin-finetuned VocalRender as plain English TTS and compare against stock VoxCPM2. If English degraded, the Mandarin singing finetune damaged it, and the fix is replay &mdash; mixing Mandarin data back in, exactly as a VoxCPM maintainer prescribes &mdash; not more English. This discriminates sharply between two very different root causes, and no paper can answer it for you.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">04</div><div><span class="do">Rebuild the evaluation before running any more experiments.</span>
+    <p>The 180-segment GTSinger English val set is already on disk and unused. Deduplicate, target &ge;2,500 reference words, pin seeds and average three, report CER alongside WER with a blockwise-bootstrap CI, and use verified lyrics rather than Whisper output as ground truth. Without this, no future result is interpretable &mdash; and Whisper&rsquo;s 35&ndash;45&nbsp;% floor on sung audio means it should not be the sole judge.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">05</div><div><span class="do">If training continues: manufacture data, don&rsquo;t collect it.</span>
+    <p>BiSinger turned 1.91&nbsp;h of real English singing into 38.2&nbsp;h via singing-voice conversion across 20 target singers, and separately pitch-shifted 5.68&nbsp;h of English <em>speech</em> into 17.5&nbsp;h of pseudo-singing. Both routes are open here &mdash; English speech corpora are abundant and RVC-class conversion is mature. This also directly attacks the two-voice problem, which more hours from the same three singers cannot.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">06</div><div><span class="do">Mix Mandarin back in, and reweight the stop head.</span>
+    <p>Both come from VoxCPM maintainers responding to this exact class of problem: mix 10&ndash;20&nbsp;% original-language data to prevent forgetting, and treat a stop head that converges far faster than the diffusion loss as a known defect to be reweighted rather than a reason to stop. Cheap config changes on the next run.</p></div></div>
+
+    <div class="action-item"><div class="action-mark">07</div><div><span class="do">Keep NNSVS/DiffSinger as the fallback, not the plan.</span>
+    <p>Its English support documents 1&nbsp;h prototype / 4&nbsp;h decent / 8&nbsp;h+ very high quality, and 6.71&nbsp;h clears the middle tier. DiffSinger trained in ~28 GPU-hours on a single V100. It takes lyrics+MIDI and gives per-voice control. The cost is one training cycle per voice and no zero-shot timbre &mdash; a different project, but a documented-achievable one.</p></div></div>
+  </section>
+
+  <section class="section" id="s6">
+    <div class="section-num">06</div>
+    <h2><span class="bar"></span>What&rsquo;s Safe to Assert</h2>
+    <div class="oncam">
+      <div class="oncam-col safe">
+        <h4>&#10003; Safe &mdash; verified against primary source</h4>
+        <ul>
+          <li>GTSinger English is 6.71&nbsp;h of actual singing from 3 singers, two of them altos.</li>
+          <li>VoxCPM2 is tokenizer-free, covers 30 languages including English, and has no phoneme layer.</li>
+          <li>VocalRender feeds lyrics as raw BPE plus 396 score tokens.</li>
+          <li>The authors&rsquo; only statement on other languages is the one HF sentence; no roadmap or recipe exists.</li>
+          <li>No English VocalRender checkpoint exists; no cross-lingual VoxCPM finetune has ever been published.</li>
+          <li>Upstream VoxCPM2&rsquo;s default LoRA schedule is r=32, &alpha;=32, LR 1e-4, 1,000 iterations.</li>
+          <li>Optimal diffusion loss is nonzero and data-dependent, so a flat value is uninformative.</li>
+          <li>In the closest published analogue, validation loss and DNS-MOS moved in opposite directions.</li>
+          <li>Whisper scores 35&ndash;45&nbsp;% WER on sung audio; two human reference sets differ by 11.1&nbsp;%.</li>
+          <li>Evaluator ASR choice alone can reverse system rankings.</li>
+          <li>BiSinger used 1.91&nbsp;h of real English singing, expanded by SVC to 38.2&nbsp;h.</li>
+          <li>Every published multilingual singing success trained multilingually from the start.</li>
+          <li>SoulX-Singer is Apache-2.0, English-capable, MIDI-score-conditioned and zero-shot, as documented.</li>
+        </ul>
+      </div>
+      <div class="oncam-col caveat">
+        <h4>&#9888; Say with a caveat</h4>
+        <ul>
+          <li>&ldquo;Effectively two voices&rdquo; &mdash; a reasonable reading of the alto/tenor split, not a measured quantity.</li>
+          <li>The 30&ndash;100&nbsp;h / 10&ndash;30 speaker tiers &mdash; best source is a vendor blog, though corroborated in direction.</li>
+          <li>Stopping the run was a mistake &mdash; the decision was unfounded; this does not prove the model was still improving.</li>
+          <li>LoRA gives no forgetting advantage over full FT &mdash; from machine translation, and it contradicts common folklore.</li>
+          <li>CER is more stable than WER &mdash; from multilingual ASR, extrapolated to singing.</li>
+          <li>The ~2,500-word eval target &mdash; our own power derivation; no published guidance exists.</li>
+          <li>NNSVS&rsquo;s 1/4/8-hour tiers &mdash; a single community repo with no measurements.</li>
+          <li>SoulX-Singer is the best fit &mdash; on paper only; quality is self-reported and unreplicated.</li>
+        </ul>
+      </div>
+      <div class="oncam-col avoid">
+        <h4>&#10007; Don&rsquo;t assert</h4>
+        <ul>
+          <li><b>&ldquo;Fix the phoneme frontend.&rdquo;</b> Retracted &mdash; there is no phoneme layer in this model.</li>
+          <li><b>&ldquo;15&ndash;30 minutes is enough.&rdquo;</b> Unverified numbers, different task class.</li>
+          <li><b>&ldquo;No abandoned projects were found, so failure is rare.&rdquo;</b> Those searches never ran.</li>
+          <li><b>&ldquo;TCSinger 2 weights are available.&rdquo;</b> Unconfirmed.</li>
+          <li><b>&ldquo;The model saturates at 1000 steps on 13&nbsp;h.&rdquo;</b> Rests on a signal now known to be uninformative.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="s7">
+    <div class="section-num">07</div>
+    <h2><span class="bar"></span>Retracted and Rejected</h2>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Claim</th><th>Status</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>&ldquo;Cross-lingual failure here is a phoneme-representation problem&rdquo;</td><td><b>Retracted</b></td><td>Previous run&rsquo;s headline. True of five other systems; VoxCPM2 is tokenizer-free with no phone inventory to unify</td></tr>
+        <tr><td>&ldquo;The model converged; 20k steps would buy nothing&rdquo;</td><td><b>Retracted</b></td><td>Based on flat diffusion loss, which is formally uninformative</td></tr>
+        <tr><td>&ldquo;12.7 hours of English training data&rdquo;</td><td><b>Corrected</b></td><td>6.71&nbsp;h of actual singing; the remainder is speech</td></tr>
+        <tr><td>&ldquo;1,000 steps is far too few&rdquo;</td><td><b>Corrected</b></td><td>It is the upstream default schedule</td></tr>
+        <tr><td>&ldquo;Rising stop-head loss indicates harmful overfitting&rdquo;</td><td><b>Corrected</b></td><td>Expected pathology of a one-positive-frame classifier; a maintainer treats it as a reweighting issue</td></tr>
+        <tr><td>&ldquo;Embedding-only retraining could fix the language&rdquo;</td><td><b>Rejected</b></td><td>Reported to yield poor results specifically when transferring multilingual models</td></tr>
+        <tr><td>&ldquo;More English singing hours is the main lever&rdquo;</td><td><b>Rejected</b></td><td>Published requirements span 0.4&ndash;500&nbsp;h with no predictive power; augmentation and speaker diversity dominate</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="section" id="s8">
+    <div class="section-num">08</div>
+    <h2><span class="bar"></span>The Frontier Question</h2>
+    <div class="frontier">
+      <div class="q">Is SoulX-Singer&rsquo;s English actually good &mdash; and if so, why is anyone still training?</div>
+      <p>Every quality claim about it is first-party, measured on its own benchmark, with no independent replication and about a thousand downloads a month for a model claiming 42,000 hours of training data and state-of-the-art multilingual singing. Either the field has not noticed it yet, or it does not live up to the paper. Both are plausible and the difference is enormous: one outcome makes the whole finetuning programme unnecessary, the other confirms that open-weight English singing with zero-shot timbre remains unsolved and the hard path is the only path.</p>
+      <p>No lens could settle it because the evidence does not exist &mdash; and unlike most frontier questions, this one is answerable in an afternoon with a reference clip and one annotated song already sitting on disk. It should be the next thing done, before any further training, because it is the only cheap experiment whose result changes everything downstream.</p>
+    </div>
+  </section>
+
+  <section class="section" id="s9">
+    <div class="section-num">09</div>
+    <h2><span class="bar"></span>Limits of This Run</h2>
+    <p>The session-wide search budget of 200 calls was exhausted mid-run &mdash; the previous deep pass on this topic had already consumed ~120. Four of seven branches were truncated: <b>22 planned queries were blocked</b> and compensated with direct source fetches, which is partial but not equivalent.</p>
+    <div class="gap">
+      <b>Specifically uncovered:</b> the skeptic branch never ran its &ldquo;projects that died&rdquo; searches, so the absence of found failures is <b>uninformative rather than reassuring</b>. The alternatives branch never reached DiffRhythm, Muskits, VISinger2, NANSY, Vocaloid 6, Suno/Udio, ElevenLabs Music or MiniMax. The intervention branch could not answer whether the embedding should get its own learning rate. The community branch never reached Seed-VC, MegaTTS3, Fish-Speech or YuE language transfer.<br><br>
+      <b>Sources that would not open:</b> Transinger full text (two attempts), BiSinger&rsquo;s hours/steps/LR (binary PDF), the Interspeech 2025 PEFT-TTS paper, and a CosyVoice2 write-up (HTTP 403).
+    </div>
+  </section>
+
+  <div class="refs" id="refs">
+    <h3>Evidence base &middot; verification status</h3>
+    <ul>
+      <li><span class="vstat ok">Confirmed</span> GTSinger (NeurIPS 2024 D&amp;B). English subset = 13.13&nbsp;h total, <b>6.71&nbsp;h singing</b>, 3 singers (1 tenor, 2 altos); authors concede annotation difficulty. <a href="https://arxiv.org/html/2409.13832v5">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> VoxCPM (OpenBMB). <b>Tokenizer-free</b>, 2B, 30 languages incl. English, no language tags; full SFT and LoRA supported. <a href="https://github.com/OpenBMB/VoxCPM">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> VoxCPM2 default LoRA config: r=32, &alpha;=32, LM+DiT, LR 1e-4, warmup 100, <b>1000 iters</b>, eff. batch 16. <a href="https://github.com/OpenBMB/VoxCPM">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> VoxCPM issue #195 &mdash; maintainer: stop-loss converges far faster than diffusion loss &rarr; model fails to stop; raise &lambda;_stop, audit trailing silence. <a href="https://github.com/OpenBMB/VoxCPM/issues/195">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> VoxCPM issue #178 &mdash; maintainer: training exclusively on a new language causes forgetting; <b>mix in original-language data</b>, build code-switched utterances. <a href="https://github.com/OpenBMB/VoxCPM/issues/178">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> VocalRender HF discussion #1 &mdash; author: <em>&ldquo;We just train the model on Chinese because of data and computing limitation. You may train your own checkpoint with target language.&rdquo;</em> <a href="https://huggingface.co/pymaster/VocalRender/discussions/1">huggingface.co</a></li>
+      <li><span class="vstat ok">Confirmed</span> VocalRender (arXiv 2607.27768). v1 only; WER 4.44 via Qwen3-ASR, Mandarin; 10 diffusion steps, CFG 2.0; <b>no seed, no run count, no item count</b>; language not listed as a limitation. <a href="https://arxiv.org/html/2607.27768v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Estimating the Optimal Diffusion Loss (2025). <em>&ldquo;The loss of diffusion models is not indicative of absolute data-fitting quality, since its optimal value is typically not zero but unknown.&rdquo;</em> Loss-gap&harr;FID correlation changes sign across noise levels. <a href="https://arxiv.org/html/2506.13763v2">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> When Fine-Tuning Fails and when it Generalises (LLM-TTS, LoRA, 3.5&ndash;18.5&nbsp;h/speaker). Validation loss improves while DNS-MOS degrades; <em>&ldquo;checkpoint selection must therefore be guided by perceptual evaluation rather than loss convergence alone.&rdquo;</em> <a href="https://arxiv.org/html/2603.10904">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Improved DDPM (Nichol &amp; Dhariwal, ICML 2021). FID worsened over training on ImageNet 64&times;64; recommend early stopping &mdash; <b>detected by FID, not loss</b>. <a href="https://arxiv.org/pdf/2102.09672">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Min-SNR (ICCV 2023). Diffusion training is multi-task with conflicting gradients; high-SNR timesteps dominate optimisation; reweighting gives 3.4&times; speedup. <a href="https://arxiv.org/abs/2303.09556">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> BiSinger (ASRU 2023). Shared CMUdict+pinyin phone space; <b>1.91&nbsp;h real English singing expanded by SVC to 38.2&nbsp;h</b>; 5.68&nbsp;h English speech &rarr; 17.5&nbsp;h pseudo-singing; MOS 3.87&rarr;3.96. <a href="https://ar5iv.labs.arxiv.org/html/2309.14089">ar5iv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> DiaMoE-TTS (2025). IPA vs pinyin frontend at fixed data: <b>WER 29&ndash;49&nbsp;% vs 90&ndash;93&nbsp;%</b>, MOS 2.22&ndash;3.15 vs 1.19&ndash;1.23; adapts on ~3&nbsp;h/dialect with LoRA r=16 and a frozen backbone. <a href="https://arxiv.org/html/2509.22727v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> CrossSinger (ASRU 2023). IPA unification + conditional LayerNorm + <b>gradient reversal to strip singer bias from lyrics</b> &mdash; with one singer per language, singer identity confounds language. <a href="https://arxiv.org/abs/2309.12672v1">arxiv.org</a></li>
+      <li><span class="vstat part">Corrected</span> Trans-tokenization line. Embedding-only retraining is established for monolingual bases but <b>&ldquo;yields poor results when transferring a multilingual model&rdquo;</b>. <a href="https://ar5iv.labs.arxiv.org/html/2408.04303">ar5iv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Conditions for Catastrophic Forgetting (MRL@EMNLP 2025). Model-to-data scale ratio drives forgetting; <b>PEFT/LoRA gives no clear advantage over full FT</b>. <a href="https://arxiv.org/abs/2510.19546v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Jam-ALT. Whisper on <b>sung</b> audio: large-v2 35.7&nbsp;%, large-v3 35.5&nbsp;%, English v3 37.7&nbsp;% WER; separation generally degrades it; revised <b>human</b> references differ from originals by 11.1&nbsp;% WER. <a href="https://arxiv.org/html/2311.13987">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Responsible evaluation for TTS (2025). Test-set version alone swings WER 2.63&rarr;4.22 for the same model; <em>&ldquo;small differences should not be interpreted as genuine performance gains.&rdquo;</em> <a href="https://arxiv.org/html/2510.06927v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> ASR-family confound (2026). Different evaluator ASR reverses system rankings; recommends &ge;2 disjoint ASR lineages. <a href="https://arxiv.org/html/2607.08256">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Blockwise bootstrap for ASR significance (Interspeech 2020) + open implementation. 1,000 replicates, 95&nbsp;% CI on the WER <em>difference</em>. <a href="https://arxiv.org/abs/1912.09508">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SP-MCQA (ICASSP 2026). <b>Low WER does not imply intelligibility</b> &mdash; FishSpeech lowest WER 5.739&nbsp;% but worst key-information accuracy 81.19&nbsp;%. <a href="https://arxiv.org/html/2510.26190v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SEED-TTS-eval / F5-TTS / VALL-E 2 protocols: ~1,000&ndash;2,000 items; F5-TTS reports <b>the average of three random-seed runs</b>. <a href="https://github.com/BytedanceSpeech/seed-tts-eval">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> SoulX-Singer (Feb 2026). Apache-2.0; &gt;42,000&nbsp;h; Mandarin/English/Cantonese; MIDI score or F0 conditioning; zero-shot timbre; ~1k downloads/mo; <b>inference-only</b>. <a href="https://huggingface.co/Soul-AILab/SoulX-Singer">huggingface.co</a></li>
+      <li><span class="vstat weak">Contested</span> SoulX-Singer tech report. SOTA claims measured on its <b>own</b> benchmark; no independent replication found. <a href="https://arxiv.org/abs/2602.07803">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> DiTSinger (2025). 530&nbsp;h (30&nbsp;h human + 500&nbsp;h synthetic) from 40 vocalists; 100k iterations; evaluated by MOS/MCD/FFE &mdash; <b>no loss-based stopping</b>. <a href="https://arxiv.org/html/2510.09016">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> DiffSinger (AAAI 2022). 160k steps main diffusion; ~28 GPU-hours on one V100; convergence asserted via MOS. <a href="https://arxiv.org/pdf/2105.02446">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Adapting a speech LM to SVS (2025). 135&nbsp;h synthetic singing, LR 5e-6, full FT; <b>speech-pretrained codec sets a decoder-side quality ceiling</b>. <a href="https://arxiv.org/html/2512.14657">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> TCSinger 2 (ACL Findings 2025). Multilingual zero-shot SVS via architecture + <b>multilingual pretraining</b>, not post-hoc language finetuning; weight release unconfirmed. <a href="https://arxiv.org/abs/2505.14910">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> NNSVS English support. <b>1&nbsp;h prototype / 4&nbsp;h decent / 8&nbsp;h+ very high quality</b>; ARPAbet-derived phone set. <a href="https://github.com/intunist/nnsvs-english-support">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> SingNet (2025). Studio corpora span 0.5&ndash;51.8&nbsp;h, &ldquo;limited to Pop Songs&rdquo; and &ldquo;limited to Chinese Singing&rdquo;. <a href="https://arxiv.org/html/2505.09325v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> XTTSv2 new-language recipe. <code>--extended_vocab_size 2000</code> first; GPT LR 5e-6, 5 epochs; <b>finetuning HiFiGAN made it worse</b>; &ldquo;works well with over 100 hours&rdquo;. <a href="https://github.com/anhnh2002/XTTSv2-Finetuning-for-New-Languages">github.com</a></li>
+      <li><span class="vstat weak">Contested</span> Qwen3-TTS issue #27 &mdash; 15&nbsp;h Turkish single-speaker finetune produced &ldquo;just unintelligible noise&rdquo;; no maintainer diagnosis, unreplicated. <a href="https://github.com/QwenLM/Qwen3-TTS/issues/27">github.com</a></li>
+      <li><span class="vstat weak">Demoted</span> RUG BA thesis &mdash; English&rarr;German DiffSinger at 15&ndash;30&nbsp;min &ldquo;comparable or better&rdquo;. PDF unparseable; single singer; different task class. <a href="https://campus-fryslan.studenttheses.ub.rug.nl/668/">rug.nl</a></li>
+      <li><span class="vstat weak">Demoted</span> Vocal-data volume tiers (5&nbsp;h floor; 10&ndash;30 speakers / 30&ndash;100&nbsp;h moderate; 50&ndash;200 / 100&ndash;500&nbsp;h strong). Vendor blog with a commercial interest; direction corroborated independently. <a href="https://thevocalmarket.com/blogs/enterprise/how-much-vocal-data-to-train-voice-model">thevocalmarket.com</a></li>
+    </ul>
+  </div>
+
+  <div class="footer">Storm Research &middot; deep mode &middot; 88 queries (22 blocked), 116 ledger rows, 67 findings graded &middot; 2 retractions, 3 corrections &middot; 2026-08-10</div>
+
+</div>
+</body>
+</html>
