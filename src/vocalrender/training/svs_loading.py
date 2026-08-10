@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from datasets import Dataset, concatenate_datasets, load_from_disk
+
+# Arrow shard sets at or below this total size are read into RAM rather than
+# memory-mapped. 8 GiB comfortably covers a single-machine finetune corpus
+# while leaving the multi-hundred-GB corpora on the lazy path.
+_IN_MEMORY_MAX_BYTES = 8 * 2**30
 
 
 def _resolve_shard_paths(preprocessed_dir: Path) -> Optional[List[str]]:
@@ -48,9 +55,38 @@ def fast_load_from_disk(preprocessed_dir: str) -> Dataset:
     shards = _resolve_shard_paths(preprocessed_dir)
     if not shards:
         return load_from_disk(str(preprocessed_dir))
+
+    # Small corpora are read into RAM instead of memory-mapped.
+    #
+    # Sustained random access against the mmapped Arrow table has repeatedly
+    # produced corrupt reads on Windows during training: "TypeError: not a
+    # sequence" out of torch.tensor on a row that loads perfectly in
+    # isolation, and once a bare SIGSEGV. Every row passes a sequential sweep
+    # and 43,880 nested accesses in a standalone harness, so the rows are
+    # fine -- it only misbehaves under live training. Reading the table into
+    # memory removes the mmap from the picture entirely rather than catching
+    # the symptom downstream.
+    #
+    # Gated on size so the 229 GB corpus this function was written for keeps
+    # its lazy path. Override with VOCALRENDER_DATASET_IN_MEMORY=0/1.
+    total_bytes = sum(os.path.getsize(s) for s in shards if os.path.exists(s))
+    env = os.environ.get("VOCALRENDER_DATASET_IN_MEMORY")
+    if env is not None:
+        in_memory = env.strip() not in ("0", "", "false", "False")
+    else:
+        in_memory = total_bytes <= _IN_MEMORY_MAX_BYTES
+    if in_memory:
+        print(
+            f"[SVSLoading] Loading {total_bytes / 2**30:.2f} GiB of Arrow shards "
+            "into memory (avoids mmap corruption seen under Windows training)",
+            file=sys.stderr, flush=True,
+        )
+
     if len(shards) == 1:
-        return Dataset.from_file(shards[0])
-    return concatenate_datasets([Dataset.from_file(s) for s in shards])
+        return Dataset.from_file(shards[0], in_memory=in_memory)
+    return concatenate_datasets(
+        [Dataset.from_file(s, in_memory=in_memory) for s in shards]
+    )
 
 
 def scan_dataset_metadata(
