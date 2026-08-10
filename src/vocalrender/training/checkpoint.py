@@ -7,7 +7,9 @@ state, and extended SVS tokenizer.
 """
 
 import json
+import os
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -44,7 +46,18 @@ def load_checkpoint(
     """
     latest = save_dir / "latest"
     if not latest.exists():
-        return 0, None
+        # Fallback for hosts where neither a symlink nor a junction could be
+        # created (stock Windows without Developer Mode) -- save_checkpoint
+        # leaves a plain-text pointer instead.
+        pointer = save_dir / "latest.txt"
+        if pointer.exists():
+            candidate = save_dir / pointer.read_text(encoding="utf-8").strip()
+            if candidate.is_dir():
+                latest = candidate
+            else:
+                return 0, None
+        else:
+            return 0, None
 
     latest_folder = latest
     unwrapped = Accelerator.unwrap(model)
@@ -297,8 +310,33 @@ def save_checkpoint(
                 latest_link.unlink()
         latest_link.symlink_to(tag)  # relative: latest -> step_0050000
         log(f"[Checkpoint] Updated 'latest' symlink -> {tag}")
-    except Exception as e:
-        log(f"[Checkpoint] Warning: failed to update latest symlink at {latest_link}: {e}")
+    except OSError as e:
+        # Windows refuses symlink creation without SeCreateSymbolicLinkPrivilege
+        # (WinError 1314) unless Developer Mode is on or the shell is elevated.
+        # A directory junction is the equivalent that needs no privilege, so
+        # try that before giving up. Failing both, drop a plain-text pointer:
+        # load_checkpoint reads it, so resume survives either way. Without this
+        # a multi-day run on a stock Windows box is unresumable after a crash.
+        made = False
+        if os.name == "nt":
+            try:
+                subprocess.run(
+                    ["cmd", "/c", "mklink", "/J", str(latest_link), str(save_dir / tag)],
+                    check=True, capture_output=True,
+                )
+                log(f"[Checkpoint] Updated 'latest' junction -> {tag}")
+                made = True
+            except Exception:
+                pass
+        if not made:
+            try:
+                (save_dir / "latest.txt").write_text(tag, encoding="utf-8")
+                log(
+                    f"[Checkpoint] Symlink unavailable ({e.__class__.__name__}); "
+                    f"wrote latest.txt -> {tag}"
+                )
+            except Exception as e2:
+                log(f"[Checkpoint] Warning: could not record latest checkpoint: {e2}")
 
     if is_transient:
         for entry in save_dir.iterdir():
