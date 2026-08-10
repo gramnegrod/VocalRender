@@ -66,14 +66,33 @@ Trained adapter: `checkpoints/svs_en_lora/step_0001000/lora_weights.safetensors`
 
 ## 4. Measured results — the important section
 
-### English intelligibility (WER, lower better) — the LoRA worked
+### English intelligibility (WER) — ⚠️ RETRACTED 2026-08-10, see below
 
-Same 15 held-out Amy segments, identical items:
+**The numbers in this subsection do not survive replication. Do not quote them.**
+Full analysis: `storm-reports/prompt-conditioned-svs-english/experiment-02-wer-variance.md`.
+
+Both figures below were **single runs**. Re-measured at n=3 per condition in one
+session, this eval has sd ≈ 3–14 points, and all conditions overlap:
+
+| condition | mean WER | sd | runs |
+|---|---:|---:|---|
+| Released checkpoint (base) | **45.86 %** | 3.36 | 43.26 / 49.65 / 44.68 |
+| + English LoRA v1 (r=16, step 1000) | **41.14 %** | 13.81 | 56.74 / 36.17 / 30.50 |
+| + English LoRA v2 (r=32, step 2000) | **42.55 %** | 8.51 | 34.04 / 42.55 / 51.06 |
+
+Welch p: base vs v1 0.62, base vs v2 0.58, v1 vs v2 0.89. **Nothing significant.**
+
+The original 44.68 % reproduces exactly as one of three base draws, and 29.79 %
+is below the lowest of three v1 draws — it was the favourable tail. The claimed
+15-point gain is an artefact of one draw against another; the defensible
+estimate is ~3–5 points and is not resolvable at n=3.
+
+Original (retracted) table, kept for the record:
 
 | | WER |
 |---|---|
-| Released checkpoint | 44.68 % |
-| + English LoRA @ step 1000 | **29.79 %** |
+| ~~Released checkpoint~~ | ~~44.68 %~~ |
+| ~~+ English LoRA @ step 1000~~ | ~~**29.79 %**~~ |
 | Paper, Mandarin, Opencpop | 4.44 |
 
 Qualitatively it stopped collapsing into Mandarin syllables:
@@ -99,8 +118,16 @@ The real-Amy controls separating at 8 prove the judge discriminates — the flat
 3.0 is a genuine verdict, not the saturation failure seen with RVC previously.
 Every critique is the same: *"smoother, lighter, lacks the grit, rasp and weight."*
 
-**The LoRA moved WER by 15 points and voice identity by exactly zero.** Timbre
-comes from the prompt clip, not the weights.
+~~**The LoRA moved WER by 15 points and voice identity by exactly zero.**~~
+**Corrected 2026-08-10:** the WER half of this sentence is withdrawn — the
+15-point figure is not reproducible (see the retraction above). The voice-identity
+half stands, and is now explained rather than merely observed: in a
+prompt-conditioned architecture timbre is a *conditioning input*, not a
+weight-resident property, so a LoRA on LM+DiT is topologically incapable of
+moving it. MiniMax-Speech states outright that it uses LoRA for emotion control
+and not for timbre; UtterTune independently reports speaker similarity pinned at
+~0.69 across every variant while accent correctness moved 0.472 → 0.975.
+Zero identity movement was the expected result, not a bug.
 
 ### Training
 

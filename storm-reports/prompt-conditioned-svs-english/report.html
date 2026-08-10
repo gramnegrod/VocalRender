@@ -535,6 +535,8 @@
         <h4>✕ Don&rsquo;t assert</h4>
         <ul>
           <li><b>&ldquo;Grit dies in the VAE.&rdquo;</b> <b>Measured and REFUTED 2026-08-09</b> &mdash; median SHR loss only &minus;10.9&nbsp;% across 4,421 voiced frames. The representation is not the bottleneck; generation is. (Now safe to assert the <em>opposite</em>, with the caveat of four files and one artist.)</li>
+          <li><b>&ldquo;The English LoRA cut WER from 44.68&nbsp;% to 29.79&nbsp;%.&rdquo;</b> <b>RETRACTED 2026-08-10.</b> Both figures were single runs. At n=3 per condition this eval has sd 3&ndash;14 points and every condition overlaps: base 45.86, v1 41.14, v2 42.55, all p&nbsp;&gt;&nbsp;0.58. The 44.68 reproduces as an ordinary base draw and 29.79 is below the lowest of three v1 runs. Best estimate is ~3&ndash;5 points, unresolvable at this sample size. See <code>experiment-02-wer-variance.md</code>.</li>
+          <li><b>Any single-run WER number from this project.</b> 15 segments and 141 reference words cannot resolve differences of the size being claimed; detecting 5 points at the observed variance would need ~50 runs per condition.</li>
           <li><b>&ldquo;Per-artist conversion beats zero-shot.&rdquo;</b> Contested by Seed-VC&rsquo;s self-evaluation. State the reconciliation instead.</li>
           <li><b>&ldquo;SECS ≥ 0.80 means same speaker.&rdquo;</b> Encoder-specific convention, no perceptual validation.</li>
           <li><b>&ldquo;Random embedding init explains the WER floor.&rdquo;</b> Refuted by local code &mdash; init is sinusoidal.</li>
