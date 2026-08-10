@@ -1,0 +1,195 @@
+# ================================================================
+# English SVS finetune v2 - LoRA on a single RTX 4070 (12 GB)
+#
+#   python scripts/train_vocalrender_svs.py --config_path conf/svs_train_en_v2.yaml
+#
+# What changed from svs_train_en.yaml, and why. Every number here traces to
+# storm-reports/prompt-conditioned-svs-english/report.html.
+#
+#   r: 16 -> 32       VoxCPM's own finetuning docs recommend r=32 for speaker
+#                     cloning and r=64 for style/language adaptation. Kwon et
+#                     al. (Interspeech 2025) tabulate the only real ablation on
+#                     a comparable setup (F5-TTS -> Korean, 12.65 h): r=32 beat
+#                     r=16 on CER 4.906 -> 4.570 and WER 12.625 -> 11.338, at
+#                     the cost of UTMOS 3.338 -> 3.264. We are optimizing
+#                     intelligibility, so we take that trade.
+#
+#   steps: 3000 -> 20000
+#                     v1 stopped at 1370 because val plateaued, and that was
+#                     read as convergence. It is more likely undertraining:
+#                     UtterTune moved Japanese accent correctness 0.472 ->
+#                     0.975 over 20k steps; Phir Hera Fairy used 150k. Nobody
+#                     in the literature adapts a language in 1k steps.
+#
+#   lr: 2e-4 -> 1e-4  VoxCPM docs specify 1e-4 for LoRA. Paired with a much
+#                     longer schedule, the lower rate is the safer combination.
+#
+#   save_interval: 500 -> 2000
+#                     Checkpoints are now ~600 MB larger. The save path was
+#                     dropping every non-LoRA trainable tensor (see below); it
+#                     now persists them, which means embed_tokens and
+#                     score_lm_head ride along. Fewer, bigger saves.
+#
+# THE BUG THIS RUN EXISTS TO FIX
+#
+# extend_tokenizer_for_svs -> resize_token_embeddings_with_svs_init replaces
+# base_lm.embed_tokens with a fresh nn.Embedding and rebuilds score_lm_head as
+# a fresh nn.Linear. Fresh modules come back requires_grad=True after the LoRA
+# freeze, so ~151M parameters were training every step -- and the checkpoint
+# writer filtered on the substring "lora_", so all of it was thrown away at
+# every save. Inference then rebuilt the embedding from its sinusoidal init.
+# v1's 29.79% WER was achieved with that entire tensor discarded.
+#
+# The old "r=32 costs 169M trainable" note in svs_train_en.yaml was measuring
+# that phantom: 169M - 151M = ~18M of actual r=32 LoRA. r=32 is cheap.
+#
+# save_checkpoint now filters on requires_grad instead of a name substring.
+# ================================================================
+
+pretrained_path: pretrained_models/VocalRender
+
+preprocessed_data_path: data/preprocessed_en
+
+# Unchanged from v1. gtsinger_en carries English pronunciation; amy contributes
+# phrasing. 5x upsample keeps ~186 Amy segments visible against GTSinger's
+# thousands without letting 27 minutes of one singer dominate.
+#
+# TODO (not enabled - needs preprocessing): VoxCPM recommends mixing 10-20%
+# original-language data to limit catastrophic forgetting. data/CrawlSinger-OS-
+# release/ is on disk but unpreprocessed. If English gains come with audible
+# Mandarin degradation, preprocess a ~1500-segment Chinese subset and add it
+# here at roughly 15% of the English total. Skipped for now because forgetting
+# Mandarin is not a cost this project is paying for.
+train_datasets: ["gtsinger_en", "amy"]
+dataset_upsample:
+  amy: 5
+
+val_datasets: ["gtsinger_en_val", "amy_val"]
+val_samples: 32
+
+sample_rate: 48000
+
+# ================================================================
+# LoRA
+# ================================================================
+
+# target_modules_lm and target_modules_dit both default to
+# ["q_proj", "v_proj", "k_proj", "o_proj"], which already matches UtterTune's
+# configuration (LoRA on all four projections of every self-attention block).
+# No override needed - stated here so the next reader does not have to go
+# check voxcpm2.py:156 to find out.
+#
+# enable_dit stays true: VoxCPM's docs call it "essential for voice quality".
+lora:
+  enable_lm: true
+  enable_dit: true
+  enable_proj: false
+  r: 32
+  alpha: 64
+  dropout: 0.05
+
+# ================================================================
+# Training
+# ================================================================
+
+# NOT amp_bf16: that keeps fp32 master params, and 2.3B fp32 weights are
+# 8.70 GiB on their own. Measured on this box it pushed reserved memory to
+# 12.56 GiB against a 12 GB card, so the driver spilled to system RAM and a
+# single step took 524 seconds. True bf16 params halve the weights to
+# ~4.35 GiB and keep everything resident.
+train_precision: "bf16"
+
+zero_stage: 0
+fsdp_sharding_group_size: 1
+distribute: false
+activation_checkpointing: true
+
+# 12 GB forces small batches; grad accum recovers the effective batch size.
+# Left at 8. The paper runs 32,768 tokens per batch against our 16,384, but
+# doubling grad_accum also doubles wall-clock per step, and at 20k steps that
+# is the more expensive axis. Revisit only if the loss is noisy.
+max_batch_tokens: 2048
+batch_size: 4
+grad_accum_steps: 8
+
+val_max_batch_tokens: 1024
+val_batch_size: 2
+
+# Must be 0 on Windows: the DataLoader uses spawn, and the tokenizer wrapper
+# is a class defined inside mask_multichar_chinese_tokens(), so it cannot be
+# pickled to worker processes. Linux forks and never hits this.
+num_workers: 0
+
+num_iters: 20000
+log_interval: 20
+
+valid_interval: 500
+audio_eval_interval: 2000
+validate_at_step_zero: true
+audio_validate_at_step_zero: false
+
+# Permanent saves are now ~600 MB heavier each; transient saves are pruned to
+# the newest, so those stay cheap and frequent for crash recovery.
+save_interval: 2000
+transient_save_interval: 500
+
+timing_enabled: true
+per_rank_diagnostics: false
+
+learning_rate: 0.0001
+weight_decay: 0.01
+warmup_steps: 500
+max_steps: 20000
+lr_scheduler: "inverse_sqrt"
+
+val_audio_samples: 8
+val_tb_max_samples: 8
+val_max_len: 200
+
+# ================================================================
+# Output
+# ================================================================
+
+save_path: checkpoints/svs_en_lora_v2
+tensorboard: ""
+
+lambdas:
+  loss/diff: 1.0
+  loss/stop: 1.0
+
+# ================================================================
+# SVS specifics
+# ================================================================
+
+# No score masking: we always infer with a full score, so train that way.
+svs_mask_strategy:
+  - global
+  - paired
+svs_mask_params:
+  global_mask_prob: 0
+  pair_mask_prob: 0
+  pair_mask_rate: 0
+
+# 50 patches = 8 seconds (1 patch = 4 latent steps at 25 Hz = 0.16 s), already
+# the top of the paper's 2-8 s range. Raising it does nothing: VALL-E 2 and
+# Voicebox both report speaker similarity flattening by ~3 s of prompt.
+prompt_audio_prob: 1.0
+prompt_max_frames: 50
+
+# ================================================================
+# Metrics
+# ================================================================
+# SingMOS needs s3prl and AES needs audiobox-aesthetics; neither is installed
+# in this venv, and both would download further models mid-run.
+#
+# Judge this run on WER (scripts_amy/eval_wer.py) and melody accuracy
+# (scripts_amy/eval_melody.py). Do NOT judge it on voice identity: timbre in a
+# prompt-conditioned architecture is a conditioning input, not a weight-
+# resident property, and MiniMax-Speech states outright that LoRA is used for
+# emotion control and not for timbre. Zero identity movement is the expected
+# result, not a failure.
+eval_metrics:
+  singmos:
+    enabled: false
+  aes:
+    enabled: false

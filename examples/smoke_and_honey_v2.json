@@ -1,0 +1,26 @@
+[
+  {
+    "item_name": "v2_01_intro",
+    "word": ["AP", "smoke", "and", "honey", "in", "my", "coffee", "cup", "SP"],
+    "pitch": [0, 69, 67, 65, 67, 62, 65, 68, 67, 65, 62, 60, 0],
+    "note": ["<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_DOT_4>", "<NOTE_8>"],
+    "pitch2word": [0, 1, 2, 3, 3, 4, 5, 6, 6, 7, 7, 7, 8],
+    "bpm": 74
+  },
+  {
+    "item_name": "v2_02_verse",
+    "word": ["AP", "rain", "on", "the", "window", "learning", "my", "name", "SP", "nobody", "tells", "me", "how", "to", "be", "good", "SP"],
+    "pitch": [0, 69, 71, 69, 67, 65, 67, 65, 62, 65, 67, 65, 0, 72, 71, 69, 68, 69, 67, 65, 67, 65, 62, 0],
+    "note": ["<NOTE_16>", "<NOTE_DOT_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_DOT_4>", "<NOTE_8>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_8>", "<NOTE_2>", "<NOTE_8>"],
+    "pitch2word": [0, 1, 2, 3, 4, 4, 5, 5, 6, 7, 7, 7, 8, 9, 9, 9, 10, 11, 12, 13, 14, 15, 15, 16],
+    "bpm": 74
+  },
+  {
+    "item_name": "v2_03_hook",
+    "word": ["AP", "you", "were", "never", "coming", "back", "SP", "I", "just", "liked", "the", "waiting", "SP"],
+    "pitch": [0, 69, 71, 72, 71, 69, 68, 69, 67, 65, 0, 62, 65, 67, 65, 69, 67, 65, 62, 0],
+    "note": ["<NOTE_16>", "<NOTE_16>", "<NOTE_16>", "<NOTE_DOT_8>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_DOT_4>", "<NOTE_8>", "<NOTE_16>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_8>", "<NOTE_16>", "<NOTE_8>", "<NOTE_2>", "<NOTE_8>"],
+    "pitch2word": [0, 1, 2, 3, 3, 4, 4, 5, 5, 5, 6, 7, 8, 9, 10, 11, 11, 11, 11, 12],
+    "bpm": 70
+  }
+]

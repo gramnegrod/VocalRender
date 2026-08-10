@@ -1,0 +1,69 @@
+# Preprocessing for the English SVS finetune.
+#
+# Two sources, both in the json_file schema:
+#   gtsinger_en - GTSinger's English subset, human-annotated. The bulk of the
+#                 data, and the part that actually teaches English phonetics.
+#   amy         - Amy Winehouse vocal stems, annotated by scripts_amy/
+#                 annotate_amy.py (whisper timings + RMVPE pitch). Small, and
+#                 present for phrasing/style rather than pronunciation.
+#
+# pretrained_path points at the released VocalRender checkpoint rather than
+# raw VoxCPM2: it carries the same AudioVAE V2 plus a tokenizer that already
+# has the pitch/note/BPM tokens added.
+
+# Train and val are registered as separate datasets because the trainer
+# selects the validation split by dataset name. The splits are grouped by
+# song (scripts_amy/split_train_val.py), so no held-out lyric or melody
+# appears in training under any singer.
+datasets:
+  - name: gtsinger_en
+    type: json_file
+    json_path: data/gtsinger_en/annotations_train.json
+    audio_root: C:/gts
+    song_id_indices: [0, 1]
+    song_id_separator: "#"
+
+  - name: gtsinger_en_val
+    type: json_file
+    json_path: data/gtsinger_en/annotations_val.json
+    audio_root: C:/gts
+    song_id_indices: [0, 1]
+    song_id_separator: "#"
+
+  - name: amy
+    type: json_file
+    json_path: data/amy/annotations_train.json
+    audio_root: C:/ai/local-llm/seed-vc/_amy_train_data
+    song_id_indices: [0]
+    song_id_separator: "__"
+
+  - name: amy_val
+    type: json_file
+    json_path: data/amy/annotations_val.json
+    audio_root: C:/ai/local-llm/seed-vc/_amy_train_data
+    song_id_indices: [0]
+    song_id_separator: "__"
+
+pretrained_path: pretrained_models/VocalRender
+
+output_dir: data/preprocessed_en
+
+max_samples: -1
+
+# MUST stay 16000 for VoxCPM2's AudioVAE V2 encoder.
+sample_rate: 16000
+
+device: cuda
+
+# One 4070; keep decode workers modest so they do not starve the GPU feed.
+num_workers: 8
+
+shard_size: 50000
+
+vae_batch_size: 16
+
+vae_max_tokens: 800000
+
+num_gpus: 1
+
+dispatch_chunk_size: 500

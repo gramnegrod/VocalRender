@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Storm Research: Prompt-Conditioned SVS — Synthetic Data, Held-Out Timbre, Cross-Lingual Finetuning, English Corpora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --blue: #2563eb; --blue-dark: #1e3a8a; --ink: #16203a; --muted: #5b6677; --line: #e4e9f2;
+    --bg-soft: #f6f8fc; --green: #15803d; --green-bg: #e9f6ee; --amber: #b45309; --amber-bg: #fdf3e7;
+    --slate: #475569; --slate-bg: #eef1f6; --red: #b91c1c; --red-bg: #fdecec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Roboto', system-ui, sans-serif; color: var(--ink); background: #eef1f6; line-height: 1.62; font-weight: 400; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 900px; margin: 0 auto; background: #fff; padding: 64px 72px 80px; box-shadow: 0 1px 40px rgba(22,32,58,0.08); }
+  .eyebrow { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; }
+  h1 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 40px; line-height: 1.12; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 18px; }
+  .lede { font-size: 17px; color: var(--muted); max-width: 640px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px; padding-top: 22px; border-top: 2px solid var(--line); font-family: 'Roboto Mono', monospace; font-size: 12px; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 600; }
+  .verify-banner { margin-top: 22px; background: var(--green-bg); border: 1px solid #bfe3cc; border-radius: 8px; padding: 13px 18px; font-size: 13px; color: #14532d; display: flex; gap: 10px; align-items: baseline; }
+  .verify-banner b { font-weight: 700; }
+  .verify-banner .tag { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: var(--green); color: #fff; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+  .howto { margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; padding: 18px 22px; background: var(--bg-soft); }
+  .howto h4 { font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .howto ul { list-style: none; }
+  .howto li { font-size: 13.5px; color: #2b3950; margin-bottom: 7px; padding-left: 16px; position: relative; }
+  .howto li::before { content: "›"; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
+  .section { margin-top: 56px; }
+  .section-num { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; color: var(--blue); letter-spacing: 0.05em; }
+  h2 { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 25px; letter-spacing: -0.01em; color: var(--ink); margin: 6px 0 18px; line-height: 1.2; }
+  h2 .bar { display: inline-block; width: 38px; height: 4px; background: var(--blue); border-radius: 2px; vertical-align: middle; margin-right: 14px; }
+  p { margin-bottom: 14px; }
+  p.body-lg { font-size: 16.5px; }
+  .ceo { background: var(--bg-soft); border-left: 5px solid var(--blue); padding: 26px 30px; border-radius: 4px; font-size: 16.5px; }
+  .ceo strong { font-weight: 700; color: var(--blue-dark); }
+  .finding { border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px; margin-bottom: 18px; position: relative; }
+  .finding-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+  .finding-title { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; line-height: 1.3; color: var(--ink); flex: 1; }
+  .finding-rank { font-family: 'Roboto Mono', monospace; font-weight: 600; font-size: 13px; color: #fff; background: var(--ink); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .finding p { font-size: 15px; color: #283449; margin-bottom: 14px; }
+  .rel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .rel { display: inline-flex; align-items: center; gap: 9px; font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 20px; }
+  .rel.high { background: #e7f0fe; color: var(--blue); }
+  .rel.medhigh { background: var(--green-bg); color: var(--green); }
+  .rel.medium { background: var(--amber-bg); color: var(--amber); }
+  .rel.low { background: var(--red-bg); color: var(--red); }
+  .score { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .score b { font-size: 17px; }
+  .score span { color: var(--muted); font-weight: 400; }
+  .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .chip-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; font-size: 13.5px; }
+  .chip-label { font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .chip-label.sup { background: var(--green-bg); color: var(--green); }
+  .chip-label.chal { background: var(--red-bg); color: var(--red); }
+  .chip-label.fix { background: var(--amber-bg); color: var(--amber); }
+  .chip-row span.who { color: #2b3950; }
+  .chip-row span.who b { font-weight: 600; }
+  .contested { border: 1px dashed var(--amber); background: #fffaf2; border-radius: 10px; padding: 22px 26px; margin-bottom: 18px; }
+  .contested .tag { font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); }
+  .contested h4 { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); margin: 6px 0 10px; }
+  .contested p { font-size: 14px; color: #4a3a22; margin-bottom: 0; }
+  .connection { background: linear-gradient(135deg, #16203a 0%, #1e3a8a 100%); color: #eaf0fb; border-radius: 12px; padding: 34px 38px; }
+  .connection h2 { color: #fff; }
+  .connection h2 .bar { background: #6ea8ff; }
+  .connection .section-num { color: #9ec1ff; }
+  .connection p { color: #d3def3; font-size: 16px; }
+  .connection .punch { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 18px; color: #fff; line-height: 1.4; margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.18); }
+  .assume { border: 1px solid var(--line); border-left: 5px solid var(--amber); border-radius: 6px; padding: 24px 28px; background: #fffdf9; }
+  .assume h3 { font-family: 'Montserrat', sans-serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+  .assume p { font-size: 15px; color: #3a3320; }
+  .assume p:last-child { margin-bottom: 0; }
+  .action-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .action-item:last-child { border-bottom: none; }
+  .action-mark { font-family: 'Roboto Mono', monospace; font-weight: 600; font-size: 13px; color: var(--blue); flex-shrink: 0; width: 34px; }
+  .action-item .do { font-weight: 600; color: var(--ink); }
+  .action-item p { font-size: 14.5px; margin-bottom: 0; color: #2b3950; }
+  .frontier { border: 2px dashed var(--blue); border-radius: 12px; padding: 30px 34px; background: var(--bg-soft); }
+  .frontier .q { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 22px; line-height: 1.32; color: var(--blue-dark); margin-bottom: 16px; }
+  .frontier p { font-size: 15px; color: #2b3950; }
+  .oncam { margin-top: 18px; }
+  .oncam-col { border-radius: 10px; padding: 20px 24px; margin-bottom: 14px; }
+  .oncam-col.safe { background: var(--green-bg); border: 1px solid #bfe3cc; }
+  .oncam-col.caveat { background: var(--amber-bg); border: 1px solid #f0d9b5; }
+  .oncam-col.avoid { background: var(--red-bg); border: 1px solid #f3c9c9; }
+  .oncam-col h4 { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .oncam-col.safe h4 { color: var(--green); }
+  .oncam-col.caveat h4 { color: var(--amber); }
+  .oncam-col.avoid h4 { color: var(--red); }
+  .oncam-col ul { list-style: none; }
+  .oncam-col li { font-size: 14px; color: #233; margin-bottom: 8px; padding-left: 16px; position: relative; line-height: 1.5; }
+  .oncam-col li::before { content: "•"; position: absolute; left: 0; font-weight: 700; }
+  .oncam-col.safe li::before { color: var(--green); }
+  .oncam-col.caveat li::before { color: var(--amber); }
+  .oncam-col.avoid li::before { color: var(--red); }
+  .refs { margin-top: 56px; padding-top: 26px; border-top: 2px solid var(--line); }
+  .refs h3 { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .refs ul { list-style: none; }
+  .refs li { font-size: 12.5px; color: var(--muted); margin-bottom: 11px; padding-left: 16px; position: relative; line-height: 1.5; }
+  .refs li::before { content: "›"; position: absolute; left: 0; color: var(--blue); font-weight: 700; }
+  .refs a { color: #34507e; text-decoration: none; }
+  .refs a:hover { text-decoration: underline; }
+  .refs .vstat { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+  .vstat.ok { background: var(--green-bg); color: var(--green); }
+  .vstat.part { background: var(--amber-bg); color: var(--amber); }
+  .vstat.weak { background: var(--red-bg); color: var(--red); }
+  .footer { margin-top: 40px; font-family: 'Roboto Mono', monospace; font-size: 11px; color: #9aa6b8; text-align: center; }
+  @media (max-width: 640px) { .page { padding: 40px 24px 56px; } h1 { font-size: 30px; } }
+  @media print { body { background: #fff; } .page { box-shadow: none; max-width: 100%; padding: 0; } .connection, .oncam-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+  /* --- additions: TOC, data tables, inline code --- */
+  .toc { margin-top: 24px; border: 1px solid var(--line); border-radius: 8px; padding: 20px 24px; background: #fff; }
+  .toc h4 { font-family: 'Roboto Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .toc ol { margin-left: 18px; }
+  .toc li { font-size: 14px; margin-bottom: 6px; }
+  .toc a { color: #34507e; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .tablewrap { overflow-x: auto; margin: 18px 0 22px; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 640px; }
+  th { background: var(--bg-soft); font-family: 'Roboto Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); color: #283449; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: 'Roboto Mono', monospace; text-align: right; white-space: nowrap; }
+  .pill { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .pill.yes { background: var(--green-bg); color: var(--green); }
+  .pill.no { background: var(--red-bg); color: var(--red); }
+  .pill.part { background: var(--amber-bg); color: var(--amber); }
+  code { font-family: 'Roboto Mono', monospace; font-size: 0.88em; background: var(--slate-bg); padding: 1px 5px; border-radius: 3px; }
+  h3.sub { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; color: var(--ink); margin: 28px 0 10px; }
+  .gap { border-left: 4px solid var(--slate); background: var(--slate-bg); padding: 16px 20px; border-radius: 4px; margin: 16px 0; font-size: 14.5px; }
+  .gap b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Storm Research &middot; deep mode &middot; verified</div>
+    <h1>Why the LoRA Fixed the Words and Not the Voice</h1>
+    <p class="lede">A six-lens investigation into prompt-conditioned singing voice synthesis: how much synthetic data is worth building, whether zero-shot timbre can reach a held-out artist, what a Chinese&rarr;English finetune actually requires, and which English singing corpora exist. Every load-bearing claim traced to a primary source.</p>
+    <div class="meta-row">
+      <span><b>Date</b> &nbsp;2026-08-09</span>
+      <span><b>Method</b> &nbsp;6 parallel branches + deepening pass, depth 3</span>
+      <span><b>Queries</b> &nbsp;120 distinct</span>
+      <span><b>Ledger</b> &nbsp;135 source-claim rows</span>
+      <span><b>Audience</b> &nbsp;Single practitioner, RTX 4070 12&nbsp;GB, VocalRender fork</span>
+    </div>
+    <div class="verify-banner">
+      <span class="tag">Verified</span>
+      <span>81 findings graded against primary sources on 2026-08-09. <b>Result: 0 fabricated, 6 corrected, 13 demoted to &ldquo;do not assert&rdquo;.</b> One literature-derived hypothesis was refuted by reading the local codebase. Confidence scores reflect post-verification evidence quality.</span>
+    </div>
+    <div class="howto">
+      <h4>How to read this</h4>
+      <ul>
+        <li><b>The branches were author-constructed.</b> All six share one framing, so where they agree, treat it as a strong hypothesis rather than independent proof.</li>
+        <li><b>Confidence is scored 1&ndash;10</b> on evidence quality: peer-reviewed measurement &gt; primary statute or official doc &gt; preprint &gt; vendor claim &gt; community consensus &gt; self-evaluation.</li>
+        <li><b>Measurement and inference are flagged separately.</b> A high score means the underlying data is solid, not that the strategic reading is certain.</li>
+        <li><b>Negative results are findings.</b> Several of the most decision-relevant items below are &ldquo;nobody has published this,&rdquo; established by repeated failed search.</li>
+      </ul>
+    </div>
+    <div class="toc">
+      <h4>Contents</h4>
+      <ol>
+        <li><a href="#s1">The 60-second summary</a></li>
+        <li><a href="#s2">Six key findings, ranked by reliability</a></li>
+        <li><a href="#s3">The hidden connection</a></li>
+        <li><a href="#s4">The four questions, answered</a></li>
+        <li><a href="#s5">English singing corpora &mdash; full inventory</a></li>
+        <li><a href="#s6">Source-quality summary</a></li>
+        <li><a href="#s7">What to actually do differently</a></li>
+        <li><a href="#s8">What&rsquo;s safe to assert</a></li>
+        <li><a href="#s9">Rejected claims and open questions</a></li>
+        <li><a href="#s10">The frontier question</a></li>
+        <li><a href="#refs">Evidence base</a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ============ 01 SUMMARY ============ -->
+  <section class="section" id="s1">
+    <div class="section-num">01</div>
+    <h2><span class="bar"></span>The 60-Second Summary</h2>
+    <div class="ceo">
+      <p style="margin-bottom:0;">An English LoRA that moved WER 44.7&nbsp;&rarr;&nbsp;29.8&nbsp;% while moving voice identity by exactly zero is not a bug report &mdash; it is the architecture working as designed. In prompt-conditioned systems, timbre enters as a conditioning input from the reference clip, and MiniMax-Speech states outright that it uses LoRA for emotion control and <em>not</em> for timbre; UtterTune independently reports speaker similarity pinned at ~0.69 across every system variant while accent correctness moved 0.472&nbsp;&rarr;&nbsp;0.975. <strong>The 0.922 SIM that makes VocalRender look like a solved timbre problem is a saturated, confounded, out-of-domain metric: it sits inside the paper&rsquo;s own ground-truth range of 0.918&ndash;0.929, it is computed by a WavLM-TDNN encoder trained on speech that scores roughly 40&nbsp;% EER on VocalSet&rsquo;s extended vocal techniques, and the prompt is cut from the same song as the target so mix and room cues inflate it.</strong> The contested part is what to do instead: the AI-cover community reaches convincing artist timbre with 10&ndash;30 minutes of clean vocal because RVC retains a FAISS index of the artist&rsquo;s actual feature vectors rather than compressing identity into one embedding &mdash; but a Seed-VC self-evaluation reports zero-shot beating per-speaker RVC on cosine similarity while losing on audio quality, so &ldquo;conversion beats zero-shot&rdquo; is not settled, only &ldquo;conversion wins on the axes humans grade.&rdquo; The real tension is that both remaining halves of the project are bottlenecked on things the user has been treating as solved: English quality is a phoneme-representation problem that five independent systems fixed with shared IPA rather than more hours, and artist grit is subharmonic period-doubling that every singing vocoder&rsquo;s periodic-plus-aperiodic assumption structurally cannot represent.</p>
+    </div>
+  </section>
+
+  <!-- ============ 02 KEY FINDINGS ============ -->
+  <section class="section" id="s2">
+    <div class="section-num">02</div>
+    <h2><span class="bar"></span>Six Key Findings, Ranked by Reliability</h2>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">VocalRender&rsquo;s SIM 0.922 is a saturated metric with no headroom, measured by a speech encoder that is near-chance on singing technique</div>
+        <div class="finding-rank">1</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel high">Reliability: High</div>
+        <div class="score"><b>9</b><span>/10</span></div>
+      </div>
+      <p>Three independently verified facts stack. First, the paper&rsquo;s own ground-truth topline is <b>0.918&ndash;0.929</b> &mdash; the reported 0.922 for VocalRender and 0.929 for Pro <em>equal or exceed</em> real recordings, so the metric cannot distinguish good from perfect. Second, singing SIM is field-standard computed with WavLM-TDNN or ECAPA trained on VoxCeleb/CN-Celeb, i.e. speech only; on VocalSet, which is specifically extended vocal technique, all speech-trained speaker-verification baselines score <b>~40&nbsp;% EER</b> &mdash; near chance. Third, VocalRender&rsquo;s prompt is a random 2&ndash;8&nbsp;s segment <em>from the same song</em> as the target, and ASV embeddings are known to be biased by channel confounders such as noise and EQ. <b>Capped at 9 rather than 10 because the step from &ldquo;the encoder is bad at singing&rdquo; to &ldquo;the encoder is blind to rasp specifically&rdquo; is inference: no study probes voice quality in speaker embeddings.</b></p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Skeptic + Academic lenses &mdash; <b>arXiv 2607.27768</b> (fetched, Table); <b>arXiv 2401.05064v1</b> (singer identity representation); <b>arXiv 2507.02176</b> (SSW13/IS2025 channel confounds)</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one. No source defends SIM as valid for singing.</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">Timbre is a conditioning input, not a weight-resident property &mdash; the zero identity movement was the expected outcome</div>
+        <div class="finding-rank">2</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel high">Reliability: High</div>
+        <div class="score"><b>9</b><span>/10</span></div>
+      </div>
+      <p>MiniMax-Speech describes a learnable speaker encoder that takes untranscribed reference audio and produces a fixed-size vector capturing &ldquo;pure vocal identity, disentangled from semantic content,&rdquo; and is explicit that <b>LoRA is used for emotion control, not timbre</b>. UtterTune provides the controlled corroboration: LoRA r=16 on CosyVoice2 moved Japanese accent correctness 0.472&nbsp;&rarr;&nbsp;0.975 over 20k steps while <b>speaker similarity stayed at ~0.69 across all systems</b>. The contrast case makes it coherent &mdash; in ACE-Step, which has <em>no</em> speaker-prompt encoder, practitioners report DiT LoRA does teach vocal timbre from 20&ndash;50 tracks. The difference is architectural, and it is exactly the difference that predicts a null result on a prompt-conditioned model.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner + Academic lenses &mdash; <b>arXiv 2505.07916</b> (MiniMax-Speech); <b>arXiv 2508.09767v1</b> (UtterTune); <b>arXiv 2501.13870v1</b> (&ldquo;a single fixed-size embedding does not suffice&rdquo;)</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">ACE-Step issue #259 &mdash; but as the architectural contrast, not a contradiction</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">Cross-lingual failure here is a phoneme-representation problem, not a data-volume problem</div>
+        <div class="finding-rank">3</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel medhigh">Reliability: Medium-high</div>
+        <div class="score"><b>8</b><span>/10</span></div>
+      </div>
+      <p>Five independent systems converge. <b>DiaMoE-TTS</b> extends an F5-TTS Chinese+English checkpoint to new dialects via a unified IPA lexicon. <b>Transinger</b> &mdash; the only cross-lingual SVS result found &mdash; covers Korean, English, Chinese and Japanese on <b>40.9&nbsp;h total</b> by decomposing IPA phonemes into letters plus diacritics so pronunciation generalises compositionally to unseen languages. <b>BiSinger</b> manufactures bilingual training data over a shared CMU-dict phone space. <b>XTTS</b> sidesteps the clash entirely by romanising CJK. And <b>GPT-SoVITS</b> is the cautionary case: Chinese receives BERT embeddings while English is zero-padded, and users report mispronunciations surviving both further finetuning and DPO. Adding hours against a mismatched frontend repeatedly fails; changing the phoneme representation repeatedly works. Scored 8 rather than 9 because this is convergence across differing architectures, not a single controlled ablation isolating representation from volume.</p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner + Academic lenses &mdash; <b>arXiv 2509.22727v1</b>; <b>PMC12542845</b> (Transinger); <b>arXiv 2309.14089</b> (BiSinger, ASRU 2023); GPT-SoVITS issue #2020</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">VoxCPM vendor docs, which frame the problem purely as hours (500+)</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">Vocal grit is subharmonic period-doubling &mdash; a phenomenon the periodic-plus-aperiodic model cannot represent</div>
+        <div class="finding-rank">4</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel medhigh">Reliability: Medium-high</div>
+        <div class="score"><b>8</b><span>/10</span></div>
+      </div>
+      <p>Peer-reviewed voice science establishes that rough voice is carried by <b>subharmonics</b> &mdash; energy peaks <em>between</em> consecutive harmonics, i.e. period-doubling &mdash; and critically that <b>voices can be perceptually rough with entirely normal jitter and shimmer</b>. Growl involves simultaneous vocal-fold and supraglottal sub-harmonic co-oscillation. Meanwhile every standard singing vocoder decomposes the waveform into a periodic component plus an aperiodic component; Period Singer needed <em>separate</em> CVAEs for the two to fix naturalness. Subharmonic phonation is neither: it is periodic at half or a third of F0. Separately, analysis of Stable Audio Open&rsquo;s VAE shows reconstruction &ldquo;less faithful in tracking the ground-truth spectrum, most visibly in the high-frequency region&rdquo; &mdash; and engineers locate rasp energy at ~2.5&nbsp;kHz with harmonic partners at 5 and 10&nbsp;kHz, the 10&nbsp;kHz partner being what compression kills first. <b>Score capped at 8: each premise is solidly sourced, but the conclusion that grit dies in VocalRender&rsquo;s VAE specifically is an untested hypothesis &mdash; see the frontier question.</b></p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Missing-stakeholder (listener) lens &mdash; <b>Journal of Voice</b> S0892199797800227 &amp; S0892199701000182; <b>arXiv 2406.09894</b> (Period Singer); <b>OpenReview 5PBKxl7o49</b></span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one directly &mdash; but nobody has measured subharmonic survival through a codec either</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">Model collapse does not threaten a synthetic-pretrain schedule &mdash; but cherry-picking outputs does</div>
+        <div class="finding-rank">5</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel medhigh">Reliability: Medium-high</div>
+        <div class="score"><b>8</b><span>/10</span></div>
+      </div>
+      <p>Shumailov et al. (<em>Nature</em> 631:755&ndash;759, 2024) is the canonical collapse result, and its protocol <b>replaces</b> real data at each generation. Gerstgrasser et al. prove that when synthetic data <b>accumulates</b> alongside real data, test error carries a finite upper bound independent of iteration count &mdash; demonstrated for language models, VAEs on images, and diffusion. A synthetic-pretrain-then-real-finetune schedule is accumulate-style, so the collapse framing largely does not apply. The live risk is different: Alemohammad et al. (ICLR 2024) show that sampling bias &mdash; keeping only the outputs that sound good &mdash; trades diversity for realism and degrades within a few generations. <b>Corrected during verification: an earlier framing treated collapse as the governing risk; the governing rule is accumulate-not-replace, plus do-not-cherry-pick.</b></p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Academic + Skeptic lenses &mdash; <b>Nature s41586-024-07566-y</b>; <b>arXiv 2404.01413</b>; <b>arXiv 2307.01850</b></span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one on the mechanism. Note no collapse study exists in speech or singing at all &mdash; applicability is inference.</span></div>
+        <div class="chip-row"><span class="chip-label fix">Corrected</span><span class="who">Risk reframed from &ldquo;collapse&rdquo; to &ldquo;curation bias&rdquo; after reading the Gerstgrasser rebuttal</span></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-head">
+        <div class="finding-title">Nothing publicly available beats GTSinger English on hours plus note-level annotation plus shipped audio</div>
+        <div class="finding-rank">6</div>
+      </div>
+      <div class="rel-row">
+        <div class="rel medhigh">Reliability: Medium-high</div>
+        <div class="score"><b>8</b><span>/10</span></div>
+      </div>
+      <p>A full inventory of 38 corpora returns no upgrade. <b>SingStyle111</b> is the best licence swap &mdash; CC BY 4.0, commercially usable, real score MIDI &mdash; but its English portion is <b>372 minutes = 6.2&nbsp;h across 6 of 8 singers with exactly one native English speaker</b>, roughly half of GTSinger&rsquo;s English. <b>DSing30</b> is the largest English singing audio at 149.1&nbsp;h but is amateur phone recordings with sentence-level lyrics and no notes. <b>DALI v2</b> has 7,756 English-dominant note-level annotations but <em>ships no audio</em>. <b>SingNet</b> (~3,000&nbsp;h) releases checkpoints only. <b>CrawlSinger-OS</b> is 2,300&nbsp;h MIT-licensed but Mandarin-primary. <b>Corrected during verification: the widely repeated claim that DAMP links are dead is false &mdash; the Zenodo records are live with files gated behind a Smule licence request.</b></p>
+      <div class="chips">
+        <div class="chip-row"><span class="chip-label sup">Supported by</span><span class="who">Practitioner + Economist lenses &mdash; per-record verification at Zenodo, HuggingFace, and the CMU SingStyle111 paper</span></div>
+        <div class="chip-row"><span class="chip-label chal">Challenged by</span><span class="who">No one &mdash; but PopBuTFy (~40&nbsp;h English) could change this if a download ever surfaces</span></div>
+        <div class="chip-row"><span class="chip-label fix">Corrected</span><span class="who">SingStyle111 English resolved from &ldquo;12.8&nbsp;h total, split unknown&rdquo; to 6.2&nbsp;h; DAMP reclassified from dead to gated</span></div>
+      </div>
+    </div>
+
+    <div class="contested">
+      <div class="tag">Contested signal &middot; monitor, do not assert &middot; confidence 5/10</div>
+      <h4>&ldquo;Per-artist voice conversion beats zero-shot prompting for identity&rdquo;</h4>
+      <p>The architectural argument is strong: RVC stores <em>all</em> training-set HuBERT/ContentVec 768-d vectors in a FAISS index and retrieves the top-8 nearest target vectors at inference, so identity is retrieved rather than summarised into one embedding &mdash; and the academic literature agrees a fixed-size embedding &ldquo;does not suffice to capture how the target speaker performs various singing techniques.&rdquo; But the Seed-VC repository&rsquo;s own evaluation reports zero-shot conversion from a single random utterance <em>beating</em> per-character RVCv2 on SECS and CER, while losing on DNSMOS audio quality. That is an author-run, objective-metric-only comparison, and SECS is a cosine metric subject to every criticism in Finding 1. <b>Do not state that conversion beats zero-shot.</b> The defensible reconciliation: zero-shot can match on embedding-space similarity while losing on audio quality and style dynamics &mdash; which are precisely what a human or LLM judge grades, and why nothing in the user&rsquo;s tests cleared 5/10.</p>
+    </div>
+
+    <div class="contested">
+      <div class="tag">Contested signal &middot; monitor, do not assert &middot; confidence 4/10</div>
+      <h4>&ldquo;X hours are required to adapt to a new language&rdquo;</h4>
+      <p>Five sources, five irreconcilable answers. VoxCPM&rsquo;s own docs say <b>500+&nbsp;h</b>. F5-TTS practitioners say 100&ndash;300&nbsp;h. A documented Vietnamese run with <b>60&nbsp;h and 160k steps produced unintelligible output</b>. Phir Hera Fairy reports <b>10&nbsp;h per language</b> retaining emergent behaviour at ~0.8&nbsp;% average metric loss. Muskits adapted KiSing on <b>42.6 minutes</b>. These differ in architecture, in whether the target language was already in pretraining, and in step count &mdash; and <b>step count is a hidden variable no source isolates</b>. The honest answer to &ldquo;how many hours&rdquo; is that the field does not know, and that steps and phoneme representation may matter more than hours.</p>
+    </div>
+  </section>
+
+  <!-- ============ 03 HIDDEN CONNECTION ============ -->
+  <section class="section" id="s3">
+    <div class="connection">
+      <div class="section-num">03</div>
+      <h2><span class="bar"></span>The Hidden Connection</h2>
+      <p>Two findings look unrelated. Finding 1 says the field&rsquo;s timbre metric is saturated and measured by the wrong encoder. Finding 4 says vocal grit lives in subharmonics that vocoders structurally cannot represent. Held apart, one is a measurement complaint and the other is a signal-processing complaint.</p>
+      <p>They are the same fact seen from two ends of the pipeline. The speaker-verification encoder scores ~40&nbsp;% EER on VocalSet <em>because</em> extended vocal technique &mdash; growl, rasp, vocal fry &mdash; is subharmonic content that a model trained on clean read speech never had to represent. The vocoder loses that content for the same structural reason: its periodic-plus-aperiodic decomposition has no slot for period-doubling. So the generator throws away exactly the information the evaluator cannot see is missing. This is why SVCC 2025 could find five systems statistically indistinguishable from ground truth on <em>identity</em> while reproducing dynamic vocal technique at only <b>37&ndash;44&nbsp;% accuracy</b>, and why SVCC 2023 saw naturalness reach human level while not one team of 26 matched target-speaker similarity. The field optimised the number it could compute.</p>
+      <p class="punch">A blind evaluator and a deaf generator, failing on the same physics &mdash; which means the 8.0-versus-3.0 gap on a human-anchored judge is not noise around a good metric, it is the signal the good-looking metric was never able to carry.</p>
+    </div>
+  </section>
+
+  <!-- ============ 03b ASSUMPTIONS ============ -->
+  <section class="section">
+    <div class="assume">
+      <h3>The assumption this briefing rests on (and the missing seventh lens)</h3>
+      <p>All six branches froze one variable: that <em>this architecture</em> is the vehicle. Every finding about prompts, LoRA rank, phoneme sets and corpora is downstream of accepting a prompt-conditioned latent-diffusion SVS as the thing being improved. A branch that started from &ldquo;what produces convincing artist vocals in 2026, by any means&rdquo; would have foregrounded the hybrid generate-then-convert pipeline much earlier, and would have treated VocalRender as a <em>performance</em> generator whose timbre output is disposable.</p>
+      <p>The missing seventh lens is the <b>rights-holder/estate</b> &mdash; not as a legal risk, which Branch 6 covered, but as an evidentiary gap. The most capable artist-voice work is plausibly commercial and unpublished precisely because publishing it invites the exposure documented in <em>Lehrman v. Lovo</em> and the ELVIS Act. That means the literature&rsquo;s silence on held-out-artist evaluation may reflect selection, not difficulty, and every &ldquo;nobody has done this&rdquo; finding in this report should be read as &ldquo;nobody has published this.&rdquo; If a capable closed system exists, the report&rsquo;s central pessimism about zero-shot artist timbre could invert.</p>
+    </div>
+  </section>
+
+  <!-- ============ 04 THE FOUR QUESTIONS ============ -->
+  <section class="section" id="s4">
+    <div class="section-num">04</div>
+    <h2><span class="bar"></span>The Four Questions, Answered</h2>
+
+    <h3 class="sub">Q1 &mdash; How much synthetic data, and does it cross languages?</h3>
+    <p><b>Diminishing returns: unknown for singing.</b> No SVS scaling curve exists in the synthetic regime. The only SVS data curve, DiTSinger, runs 30&nbsp;h&nbsp;&rarr;&nbsp;530&nbsp;h with <em>no saturation observed</em>. The nearest knees come from ASR: 200&ndash;300&nbsp;h in code-switching ASR (100&rarr;200&nbsp;h gives 23&nbsp;% relative WER gain, then 10.3&nbsp;%, 4.1&nbsp;%, 2.5&nbsp;%), and ~20&nbsp;h in small-scale accented-ASR finetuning beyond which synthetic data actively <em>degrades</em>. Neither is safe to port.</p>
+    <p><b>Cross-lingual transfer: one datapoint, positive, small.</b> ACE-Opencpop&rsquo;s synthetic Mandarin pretraining transferred to Japanese Kiritan for <b>+0.10 MOS</b>. That is the entire published evidence base for synthetic singing crossing a language boundary. Mandarin-synthetic&nbsp;&rarr;&nbsp;English-singing has never been published.</p>
+    <p><b>The most useful number for a 12&nbsp;GB budget:</b> a 1.7B TTS-pretrained speech LM finetuned on <b>135&nbsp;h of synthetic singing</b> matched SOTA discrete SVS (SingMOS 4.09 vs 4.08) &mdash; but F0 RMSE lagged 62.79 vs 55.83&nbsp;Hz. Consistent with the cross-cutting pattern that <b>the synthetic-data penalty in SVS concentrates in pitch, not intelligibility</b>. Two further constraints: synthetic-only training fails while mixing real recovers most of the loss, and in an adjacent task a curated 700&nbsp;h subset beat a full 2,500&nbsp;h set &mdash; filtering beats growing.</p>
+
+    <h3 class="sub">Q2 &mdash; Has anyone reached a held-out artist, and what SIM is convincing?</h3>
+    <p><b>No, and there is no such SIM value.</b> Across SVCC 2023, SVCC 2025, SoulX-Singer-Eval, TCSinger, StyleSinger and VocalRender, every &ldquo;unseen singer&rdquo; is a recruited amateur, a corpus speaker, or a Mixing Secrets multitrack. Not one paper evaluates a named, commercially distinctive recording artist as a held-out target with human similarity ratings.</p>
+    <p>Nor is there a published cosine threshold for human-convincing timbre. VoxSim gives ASV cosine-to-human correlation of ~0.75 in-domain but <b>~0.50 on out-of-domain synthetic speech</b> &mdash; the correlation collapses precisely where synthesis lives, and that is speech, not singing. SVCC reports Spearman &rho;&nbsp;&asymp;&nbsp;&minus;0.63 (2023) and &asymp;&nbsp;0.8 (2025) for singer-embedding distance, with organisers stating objective metrics are &ldquo;not at a level where [they] could be considered a true replacement for subjective scores.&rdquo; The commonly cited SECS&nbsp;&ge;&nbsp;0.80 &ldquo;same speaker&rdquo; rule is encoder-specific convention with no perceptual validation.</p>
+    <p><b>Prompt length is not a lever.</b> VALL-E 2 and Voicebox both report SIM growing quickly then flattening &mdash; ~3&nbsp;s captures most timbre, with 3/5/10&nbsp;s roughly equivalent and only 1&nbsp;s failing. The user&rsquo;s 8.6&nbsp;s test moving nothing is exactly what the literature predicts. There is <em>no</em> published information-theoretic bound on prompt-carried identity; only this empirical saturation curve.</p>
+
+    <h3 class="sub">Q3 &mdash; Is there a Chinese&rarr;English finetune recipe?</h3>
+    <p><b>Not for singing.</b> Transinger trains multilingually from scratch; DiaMoE-TTS stays inside Chinese. Adapting an already-Mandarin-finetuned SVS checkpoint to English is unpublished territory. What exists is transferable guidance from TTS:</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Parameter</th><th>Evidence</th><th>Against the current run</th></tr></thead>
+      <tbody>
+        <tr><td>LoRA rank</td><td>VoxCPM docs: &ldquo;r: 32 for speaker cloning, 64 for style/language adaptation&rdquo;. Kwon et al. tabulate r=16 vs r=32 on F5-TTS&rarr;Korean: r=32 improves CER 4.906&rarr;4.570 and WER 12.625&rarr;11.338, worsens UTMOS 3.338&rarr;3.264</td><td>r=16 &mdash; below both recommendations</td></tr>
+        <tr><td>Steps</td><td>UtterTune 20k steps; Phir Hera Fairy 150k; the failed Vietnamese run 160k</td><td><b>1,000 steps</b> &mdash; 1&ndash;2 orders low</td></tr>
+        <tr><td>LoRA placement</td><td>UtterTune: Q, K, V <em>and</em> O of every self-attention block. VoxCPM: <code>enable_dit: true</code> &ldquo;essential for voice quality&rdquo;</td><td>LM+DiT &mdash; correct; projection coverage unverified</td></tr>
+        <tr><td>Learning rate</td><td>VoxCPM: 1e-4 LoRA, 1e-5 full FT. The 60&nbsp;h Vietnamese <em>failure</em> used 5e-6</td><td>&mdash;</td></tr>
+        <tr><td>Anti-forgetting</td><td>VoxCPM: mix 10&ndash;20&nbsp;% original Chinese/English data</td><td>Not currently done</td></tr>
+        <tr><td>Hours</td><td>No consensus: 42.6&nbsp;min &rarr; 500+&nbsp;h across five sources</td><td>12.7&nbsp;h &mdash; defensible, not clearly insufficient</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p><b>LoRA versus full finetune is genuinely unsettled.</b> Three papers give three answers on forgetting: comparable in multilingual translation, LoRA-favourable for Whisper ASR, LoRA-favourable in cross-lingual transfer because full FT forgets. Kwon et al. found full FT gave better SIM-O (0.659 vs 0.640) and UTMOS (3.503 vs 3.338) but <em>worse</em> CER (5.671 vs 4.906) and worse naturalness MOS (3.58 vs 3.88) than PEFT. The literature does not support &ldquo;just do a full finetune&rdquo; as a safe default.</p>
+    <div class="gap"><b>On tokenizer handling:</b> the VoxCPM docs contain nothing at all on vocabulary expansion or embedding-row initialisation. Local code inspection settled it independently &mdash; see the action items.</div>
+
+    <h3 class="sub">Q4 &mdash; What English corpora beat GTSinger?</h3>
+    <p>None, on the combination that matters. Full inventory follows in section 05. The short answer: for <b>licence</b>, SingStyle111 (CC BY 4.0) is a clear upgrade at half the hours; for <b>volume</b>, DSing30 (149.1&nbsp;h) exists but has no note annotation and inherits a non-commercial Smule licence; for <b>annotation breadth</b>, DALI v2 has 7,756 note-level English-dominant songs but distributes no audio. Building an English analogue of ACE-Opencpop &mdash; a synthesised, note-aligned corpus at ~130&nbsp;h &mdash; is the gap nobody has filled.</p>
+  </section>
+
+  <!-- ============ 05 CORPUS INVENTORY ============ -->
+  <section class="section" id="s5">
+    <div class="section-num">05</div>
+    <h2><span class="bar"></span>English Singing Corpora &mdash; Full Inventory</h2>
+    <p style="color:var(--muted);font-size:14.5px;">Verified per-record against Zenodo, HuggingFace, GitHub and source papers on 2026-08-09. &ldquo;Notes&rdquo; column means note-level MIDI or score annotation, the thing SVS training needs. Mandarin and Japanese sets included where they are the reference points for scale.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Corpus</th><th>Hours</th><th>Singers</th><th>Language</th><th>Licence</th><th>Notes?</th><th>Available 2026</th></tr></thead>
+      <tbody>
+        <tr><td><b>GTSinger (EN subset)</b></td><td class="num">~12.7</td><td class="num">3</td><td>EN (of 9)</td><td>CC BY-NC-SA 4.0</td><td><span class="pill yes">musicxml</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td><b>SingStyle111 (EN)</b></td><td class="num">6.2</td><td class="num">6 of 8</td><td>EN of EN/ZH/IT</td><td><b>CC BY 4.0</b></td><td><span class="pill yes">MIDI+phon</span></td><td><span class="pill yes">Zenodo</span></td></tr>
+        <tr><td>VocalSet</td><td class="num">10.1</td><td class="num">20</td><td>EN (techniques)</td><td><b>CC BY 4.0</b></td><td><span class="pill part">via Annotated-VocalSet</span></td><td><span class="pill yes">Zenodo</span></td></tr>
+        <tr><td>NHSS</td><td class="num">7</td><td class="num">10</td><td>EN pop</td><td>NUS EULA, research</td><td><span class="pill no">word-level only</span></td><td><span class="pill part">By request</span></td></tr>
+        <tr><td>CSD (Children&rsquo;s Song)</td><td class="num">~4.7</td><td class="num">1</td><td>50 EN + 50 KO</td><td>CC BY-NC-SA 4.0</td><td><span class="pill yes">note MIDI</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>NUS-48E</td><td class="num">2.8</td><td class="num">12</td><td>EN</td><td>research, request</td><td><span class="pill part">phone-level</span></td><td><span class="pill part">By request</span></td></tr>
+        <tr><td>vocadito</td><td class="num">&lt;1</td><td class="num">unknown</td><td>7 langs incl. EN</td><td><b>CC BY 4.0</b></td><td><span class="pill yes">2&times; note</span></td><td><span class="pill yes">Zenodo</span></td></tr>
+        <tr><td><b>DSing30</b></td><td class="num">149.1</td><td class="num">many</td><td>EN</td><td>Smule NC</td><td><span class="pill no">lyrics only</span></td><td><span class="pill part">Needs DAMP</span></td></tr>
+        <tr><td>DSing3 / DSing1</td><td class="num">44.7 / 15.1</td><td class="num">many</td><td>EN</td><td>Smule NC</td><td><span class="pill no">lyrics only</span></td><td><span class="pill part">Needs DAMP</span></td></tr>
+        <tr><td><b>DALI v2</b></td><td class="num">7,756 songs</td><td class="num">thousands</td><td>EN-dominant</td><td>CC BY-NC-SA 4.0</td><td><span class="pill yes">note-level</span></td><td><span class="pill no">No audio</span></td></tr>
+        <tr><td>DAMP Sing!300x30x2</td><td class="num">13.5 TB</td><td class="num">very many</td><td>multi incl. EN</td><td>Smule NC, no redistrib.</td><td><span class="pill no">lyrics only</span></td><td><span class="pill part">Gated, live</span></td></tr>
+        <tr><td>DAMP-VSEP</td><td class="num">unknown</td><td class="num">6,456 artists</td><td>multi</td><td>Smule NC</td><td><span class="pill no">separation pairs</span></td><td><span class="pill part">Gated</span></td></tr>
+        <tr><td>PopBuTFy (EN)</td><td class="num">~40.4?</td><td class="num">22</td><td>EN</td><td><b>unknown</b></td><td><span class="pill no">none public</span></td><td><span class="pill no">No link found</span></td></tr>
+        <tr><td>JamendoLyrics</td><td class="num">~5</td><td class="num">80</td><td>multi incl. EN</td><td>CC per-track</td><td><span class="pill part">word-level</span></td><td><span class="pill yes">HuggingFace</span></td></tr>
+        <tr><td>MUSDB18-HQ</td><td class="num">~10</td><td class="num">mixed</td><td>mostly EN</td><td>educational / NC</td><td><span class="pill no">stems only</span></td><td><span class="pill yes">Zenodo</span></td></tr>
+        <tr><td>MedleyDB v1+v2</td><td class="num">~7&ndash;12</td><td class="num">mixed</td><td>mostly EN</td><td>CC BY-NC-SA 4.0</td><td><span class="pill part">melody f0</span></td><td><span class="pill part">By request</span></td></tr>
+        <tr><td>MoisesDB</td><td class="num">240 tracks</td><td class="num">mixed</td><td>mixed</td><td>research NC</td><td><span class="pill no">stems only</span></td><td><span class="pill yes">Registration</span></td></tr>
+        <tr><td>MTG-Jamendo</td><td class="num">55,701 songs</td><td class="num">many</td><td>multi</td><td>CC per-track</td><td><span class="pill no">tags only</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td><b>CrawlSinger-OS</b></td><td class="num">&gt;2,300</td><td class="num">unknown</td><td><b>Mandarin</b></td><td><b>MIT</b></td><td><span class="pill yes">note + tempo</span></td><td><span class="pill yes">HuggingFace</span></td></tr>
+        <tr><td>SingNet</td><td class="num">~3,000</td><td class="num">unknown</td><td>multi, EN share unstated</td><td><b>unstated</b></td><td><span class="pill part">pipeline-derived</span></td><td><span class="pill no">Checkpoints only</span></td></tr>
+        <tr><td>ACE-Opencpop</td><td class="num">130</td><td class="num">~30</td><td>Mandarin (synthetic)</td><td>CC BY-NC 4.0</td><td><span class="pill yes">full score</span></td><td><span class="pill yes">ESPnet</span></td></tr>
+        <tr><td>ACE-KiSing</td><td class="num">32.5</td><td class="num">34</td><td>Mandarin (synthetic)</td><td>CC BY-NC 4.0</td><td><span class="pill yes">note-level</span></td><td><span class="pill yes">ESPnet</span></td></tr>
+        <tr><td>OpenSinger</td><td class="num">50&ndash;85 <i>(disputed)</i></td><td class="num">66&ndash;93</td><td>Mandarin</td><td>CC BY-NC-SA 4.0</td><td><span class="pill part">phoneme</span></td><td><span class="pill part">By request</span></td></tr>
+        <tr><td>M4Singer</td><td class="num">29.8</td><td class="num">20</td><td>Mandarin</td><td>CC BY-NC-SA 4.0</td><td><span class="pill yes">note MIDI</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>Opencpop</td><td class="num">5.2</td><td class="num">1</td><td>Mandarin</td><td>NC research</td><td><span class="pill yes">note MIDI</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>MIR-1K</td><td class="num">2.2</td><td class="num">8</td><td>Mandarin</td><td><b>unclear</b></td><td><span class="pill part">pitch contour</span></td><td><span class="pill part">Restricted mirror</span></td></tr>
+        <tr><td>Tohoku Kiritan</td><td class="num">0.95</td><td class="num">1</td><td>Japanese</td><td>research</td><td><span class="pill yes">note MIDI</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>JVS-MuSiC</td><td class="num">small</td><td class="num">100</td><td>Japanese</td><td>unverified</td><td><span class="pill no">lyrics</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>PJS</td><td class="num">small</td><td class="num">1</td><td>Japanese</td><td>CC BY-SA 4.0</td><td><span class="pill part">phoneme</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>Dagstuhl ChoirSet</td><td class="num">~2</td><td class="num">choir</td><td>DE/Latin</td><td><b>CC BY 4.0</b></td><td><span class="pill yes">f0+score</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>Erkomaishvili</td><td class="num">~3</td><td class="num">1</td><td>Georgian</td><td><b>CC BY 4.0</b></td><td><span class="pill yes">f0+sheet</span></td><td><span class="pill yes">Open</span></td></tr>
+        <tr><td>Cantoría</td><td class="num">&lt;1</td><td class="num">4</td><td>ES/Latin</td><td>unverified</td><td><span class="pill part">f0</span></td><td><span class="pill yes">Zenodo</span></td></tr>
+        <tr><td>SoulX-Singer-Eval</td><td class="num">100 segs</td><td class="num">50</td><td>EN/ZH</td><td>repo terms</td><td><span class="pill yes">manual melody</span></td><td><span class="pill part">Eval-only</span></td></tr>
+        <tr><td>ESD</td><td class="num">29+</td><td class="num">20</td><td>EN/ZH</td><td>research</td><td colspan="2"><span class="pill no">Speech, not singing &mdash; excluded</span></td></tr>
+        <tr><td>AVP (vocal percussion)</td><td class="num">9,780 utt.</td><td class="num">28</td><td>n/a</td><td>CC BY 4.0</td><td colspan="2"><span class="pill no">Beatbox onsets &mdash; irrelevant</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p><b>Commercially usable subset:</b> VocalSet, SingStyle111, vocadito, Erkomaishvili, Dagstuhl ChoirSet (all CC BY 4.0), PJS (CC BY-SA 4.0), and CrawlSinger-OS (MIT &mdash; though the MIT tag covers the packaging, not the underlying crawled recordings&rsquo; copyright). Everything else is non-commercial, share-alike, or a bespoke research EULA.</p>
+    <div class="gap"><b>Source separation as a corpus strategy</b> is now mainstream &mdash; SingNet uses MDX23, CrawlSinger-OS uses cascaded mel-RoFormer plus de-reverb, and the published QC pattern is filter-don&rsquo;t-fix (SingNet discards anything a fine-tuned SingMOS scorer rates below 3.0). But <b>no clean-versus-separated SVS training ablation exists.</b> The nearest numbers &mdash; SingNet&rsquo;s 3.52 vs 3.64 ground-truth MOS, and a ~0.4 MOS spread between Demucs and Conv-TasNet on artifacts &mdash; conflate vocoder loss with separation loss. Treat any separated-vocal penalty estimate as unquantified. Separation also does nothing for licensing: separating a commercial track produces a derivative of a copyrighted recording regardless of dataset tagging.</div>
+  </section>
+
+  <!-- ============ 06 SOURCE QUALITY ============ -->
+  <section class="section" id="s6">
+    <div class="section-num">06</div>
+    <h2><span class="bar"></span>Source-Quality Summary</h2>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Class</th><th>Rows</th><th>Examples</th><th>How it was treated</th></tr></thead>
+      <tbody>
+        <tr><td>Peer-reviewed / journal</td><td class="num">14</td><td><i>Nature</i> 631:755; Journal of Voice; TISMIR; Interspeech/ICASSP/ISMIR proceedings</td><td>Load-bearing. Quoted for mechanism and measurement</td></tr>
+        <tr><td>arXiv preprint</td><td class="num">48</td><td>VocalRender 2607.27768; SVCC 2509.15629; MiniMax 2505.07916</td><td>Used, but fetched in full for any numeric claim</td></tr>
+        <tr><td>Primary legal / official</td><td class="num">6</td><td>TN Code §47-25-1105; EU Commission Art. 50 FAQ; <i>Lehrman v. Lovo</i>; Creative Commons</td><td>Authoritative for the legal section</td></tr>
+        <tr><td>Dataset records</td><td class="num">21</td><td>Zenodo, HuggingFace, GitHub dataset cards</td><td>Verified per record; hours/licence never taken from aggregators</td></tr>
+        <tr><td>Vendor documentation</td><td class="num">7</td><td>VoxCPM readthedocs; ElevenLabs docs; MiniMax</td><td>Quoted verbatim, flagged as unsupported by published experiment</td></tr>
+        <tr><td>Practitioner / community</td><td class="num">14</td><td>AI Hub wiki; GitHub issues; Applio; voice-models catalogue</td><td>Demoted. Used for empirical practice the literature does not cover</td></tr>
+        <tr><td>Law-firm / advocacy analysis</td><td class="num">7</td><td>Holland &amp; Knight; EFF; Skadden; Greenberg Traurig</td><td>Used where primary statute text was unreachable; flagged</td></tr>
+        <tr><td>Self-evaluation / marketing</td><td class="num">3</td><td>Seed-VC EVAL.md; MiniMax &ldquo;99&nbsp;%&rdquo;; Suno persona blogs</td><td>Contested. Never load-bearing</td></tr>
+        <tr><td>News / tracker</td><td class="num">2</td><td>Munich Suno ruling; music-AI litigation tracker</td><td>Demoted to &ldquo;a ruling occurred&rdquo;</td></tr>
+        <tr><td><b>Local source code</b></td><td class="num">3</td><td><code>src/vocalrender/model/svs_utils.py</code></td><td>Strongest class available &mdash; refuted one literature hypothesis outright</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ============ 07 ACTIONS ============ -->
+  <section class="section" id="s7">
+    <div class="section-num">07</div>
+    <h2><span class="bar"></span>What To Actually Do Differently</h2>
+    <p class="body-lg" style="color:var(--muted);">Ordered by evidence strength per unit of GPU time. The first three are cheap and settle questions currently being guessed at.</p>
+
+    <div class="action-item">
+      <div class="action-mark">01</div>
+      <div><span class="do">Stop treating voice identity as a training target on this architecture.</span>
+      <p>Finding 2 says a prompt-conditioned model cannot learn timbre into its weights &mdash; MiniMax uses LoRA for emotion explicitly <em>not</em> timbre, and UtterTune&rsquo;s speaker similarity did not move across any variant. Every future LoRA should be evaluated on WER and melody accuracy only. Identity belongs to a separate stage.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">02</div>
+      <div><span class="do">Fix the unsaved-parameter bug at both sites, not one.</span>
+      <p><code>svs_utils.py:250</code> installs a fresh <code>nn.Embedding</code> that arrives <code>requires_grad=True</code> after freezing &mdash; the 151M phantom trainable params. <code>svs_utils.py:115&ndash;130</code> rebuilds <code>score_lm_head</code> as a new <code>nn.Linear</code> with the same defect, which the handoff had not recorded. Either freeze both explicitly after resize, or widen the save filter beyond <code>"lora_"</code>. Note the initialisation itself is <em>fine</em> &mdash; pitch, BPM and duration tokens get sinusoidal init, which is better than the mean-of-subtokens fix the literature recommends, so the &ldquo;random init causes gibberish&rdquo; theory is dead.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">03</div>
+      <div><span class="do">DONE &mdash; the subharmonic VAE round-trip measurement was run, and it changes the plan.</span>
+      <p><code>scripts_amy/vae_roundtrip_shr.py</code>, four Amy stems, 4,421 voiced frames. Median SHR loss <b>&minus;10.9&nbsp;%</b>: grit largely survives the VAE, so the failure is in generation, not representation. <b>Do not abandon in-model timbre work as physically impossible</b> &mdash; that argument is closed off. Two operational consequences: the &gt;8&nbsp;kHz band of every render is decoder invention (the encoder is 16&nbsp;kHz), so prompt clips carry no real information up there either; and post-VAE conversion remains the pragmatic path, but because the generator is weak, not because the latent is incapable.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">04</div>
+      <div><span class="do">Re-run the English LoRA at r=32, 20k steps, all four attention projections, with 10&ndash;20&nbsp;% Chinese data mixed in.</span>
+      <p>Current run was r=16 at 1,000 steps. UtterTune moved accent correctness 0.472&nbsp;&rarr;&nbsp;0.975 at 20k steps in under an hour on a 4090. Kwon et al. tabulate r=32 beating r=16 on CER and WER, at some UTMOS cost. VoxCPM recommends the data mixing against forgetting. Expect WER to improve; expect identity not to move, and do not read that as failure.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">05</div>
+      <div><span class="do">Attack English through the phoneme frontend before buying more hours.</span>
+      <p>Five independent systems fixed cross-lingual quality by changing representation, not volume &mdash; unified IPA (DiaMoE-TTS), IPA decomposed into letters plus diacritics (Transinger, 4 languages on 40.9&nbsp;h total), a shared CMU-dict phone space (BiSinger), or romanisation (XTTS). GPT-SoVITS is the counter-example where an asymmetric frontend made the problem unfixable by acoustic finetuning. Check what VocalRender&rsquo;s text frontend actually does with English before adding data.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">06</div>
+      <div><span class="do">Move melody accuracy to a first-class metric now.</span>
+      <p>The synthetic-data penalty in SVS concentrates in pitch: the 135&nbsp;h speech-LM result matched SOTA on SingMOS while trailing 7&nbsp;Hz on F0 RMSE, and VocalRender itself documents a synthetic-versus-real pitch distribution mismatch. The paper&rsquo;s own RPA is 0.72. The already-written <code>eval_melody.py</code> is the correct instrument and has never been run &mdash; and if a synthetic English corpus gets built, melodic-range and vibrato coverage must be checked, not just WER.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">07</div>
+      <div><span class="do">If artist timbre remains a goal, restructure as generate-then-convert, with conversion last.</span>
+      <p>The AI-cover community reaches convincing artist timbre from 10&ndash;30 min of clean isolated vocal at 250&ndash;500 epochs with RMVPE, because RVC retrieves from a FAISS index of the artist&rsquo;s actual feature vectors rather than compressing identity into one embedding. The hybrid pipeline is standard practice, and the documented failure mode is running conversion <em>before</em> a generative stage, which carries artifacts through. Caveat honestly: the Seed-VC self-evaluation contests the ordering, so treat this as the best-supported hypothesis rather than a settled result. Note 0.4&nbsp;h is above every published few-shot threshold &mdash; cleanliness of separated stems, not duration, is the risk.</p></div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-mark">08</div>
+      <div><span class="do">Keep artifacts local. Publishing is the act that creates exposure.</span>
+      <p>Private, non-commercial experimentation sits outside EU AI Act scope by explicit Commission FAQ, and Tennessee has a scholarship exemption. But <em>Lehrman v. Lovo</em> established that copyright and Lanham claims fail while state right-of-publicity survives, the ELVIS Act reaches distribution of a tool whose primary purpose is one identifiable person&rsquo;s voice, and NO FAKES &mdash; advanced from Senate Judiciary 18 Jun 2026, not yet law &mdash; has <b>no general personal-use carve-out</b>. Publishing an adapter trained on CC BY-NC-SA data simultaneously triggers the untested ELVIS tool prong and the unresolved ShareAlike-reaches-weights question.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 08 CLAIM SAFETY ============ -->
+  <section class="section" id="s8">
+    <div class="section-num">08</div>
+    <h2><span class="bar"></span>What&rsquo;s Safe to Assert</h2>
+    <div class="oncam">
+      <div class="oncam-col safe">
+        <h4>✓ Safe &mdash; verified against primary source</h4>
+        <ul>
+          <li>VocalRender&rsquo;s SIM 0.922 sits inside its own ground-truth band of 0.918&ndash;0.929 &mdash; the metric is saturated.</li>
+          <li>Singing SIM is computed with speech-trained encoders that score ~40&nbsp;% EER on VocalSet.</li>
+          <li>No published prompt-conditioned SVS has been evaluated on a named, commercially distinctive artist as a held-out target.</li>
+          <li>There is no published cosine value that certifies human-convincing timbre.</li>
+          <li>SIM saturates by ~3&nbsp;s of prompt; longer prompts do not help.</li>
+          <li>SVCC 2025 reproduced dynamic vocal techniques at only 37&ndash;44&nbsp;% accuracy; SVCC 2023 saw no team of 26 match target similarity.</li>
+          <li>Timbre in prompt-conditioned architectures is a conditioning input; MiniMax states it uses LoRA for emotion, not timbre.</li>
+          <li>Model collapse requires <i>replacing</i> real data; accumulation bounds the error (Gerstgrasser et al.).</li>
+          <li>ElevenLabs PVC does not support singing &mdash; &ldquo;spoken voice only&rdquo;, quoted verbatim.</li>
+          <li>Vocal roughness is carried by subharmonics; voices can be rough with normal jitter and shimmer.</li>
+          <li>SingStyle111&rsquo;s English portion is 372 min = 6.2&nbsp;h across 6 of 8 singers, one native speaker.</li>
+          <li>DAMP Zenodo records are live and gated, not dead.</li>
+          <li>No competitive SVS/TTS model has been pretrained on a single ≤24&nbsp;GB consumer GPU.</li>
+          <li>Copyright is not the legal exposure vector; state right of publicity is (<i>Lehrman v. Lovo</i>).</li>
+          <li>NO FAKES has no general personal-use carve-out; exceptions are speech-purpose-based.</li>
+          <li>Private non-commercial use is explicitly outside EU AI Act Art. 50 scope.</li>
+        </ul>
+      </div>
+      <div class="oncam-col caveat">
+        <h4>⚠ Say with a caveat</h4>
+        <ul>
+          <li>&ldquo;The SIM encoder is blind to rasp&rdquo; &mdash; sound inference from two confirmed facts, but no study probes voice quality in speaker embeddings directly.</li>
+          <li>Synthetic singing pretraining crosses languages &mdash; one datapoint, Mandarin&rarr;Japanese, +0.10 MOS. Do not generalise the magnitude.</li>
+          <li>The 200&ndash;300&nbsp;h diminishing-returns knee &mdash; ASR, not SVS. The only SVS curve shows no saturation by 530&nbsp;h.</li>
+          <li>&ldquo;Rank 16&rarr;64 loses speaker adaptation&rdquo; &mdash; the authors&rsquo; prose. Only r=16 vs r=32 is tabulated.</li>
+          <li>&ldquo;10&nbsp;h per language suffices&rdquo; &mdash; true for WER in a monoglot setup; on MUSHRA 100&nbsp;h still edges 10&nbsp;h (64.3 vs 61.5).</li>
+          <li>VoxCPM&rsquo;s 500+&nbsp;h and rank guidance &mdash; vendor documentation with no published supporting experiment.</li>
+          <li>&ldquo;Use full FT for a new language&rdquo; &mdash; implicit in VoxCPM&rsquo;s doc structure, never stated. Do not quote as doc wording.</li>
+          <li>12&nbsp;GB LoRA penalty of ~1.3&ndash;2&times; &mdash; all figures are text-LLM benchmarks, not audio codec-LM.</li>
+          <li>RVC&rsquo;s 10&ndash;30 min / 300&ndash;500 epochs &mdash; community consensus, not peer-reviewed.</li>
+          <li>The ELVIS Act tool-distribution prong &mdash; primary text confirmed, but judicially untested in two years.</li>
+        </ul>
+      </div>
+      <div class="oncam-col avoid">
+        <h4>✕ Don&rsquo;t assert</h4>
+        <ul>
+          <li><b>&ldquo;Grit dies in the VAE.&rdquo;</b> <b>Measured and REFUTED 2026-08-09</b> &mdash; median SHR loss only &minus;10.9&nbsp;% across 4,421 voiced frames. The representation is not the bottleneck; generation is. (Now safe to assert the <em>opposite</em>, with the caveat of four files and one artist.)</li>
+          <li><b>&ldquo;Per-artist conversion beats zero-shot.&rdquo;</b> Contested by Seed-VC&rsquo;s self-evaluation. State the reconciliation instead.</li>
+          <li><b>&ldquo;SECS ≥ 0.80 means same speaker.&rdquo;</b> Encoder-specific convention, no perceptual validation.</li>
+          <li><b>&ldquo;Random embedding init explains the WER floor.&rdquo;</b> Refuted by local code &mdash; init is sinusoidal.</li>
+          <li><b>&ldquo;There is an information-theoretic bound on prompt-carried identity.&rdquo;</b> No such published bound exists.</li>
+          <li><b>&ldquo;NO FAKES is law.&rdquo;</b> Reported out of Senate Judiciary 18 Jun 2026; awaiting the full Senate.</li>
+          <li><b>&ldquo;ShareAlike propagates to trained weights.&rdquo;</b> Creative Commons says &ldquo;it depends&rdquo;; commentators split; unlitigated.</li>
+          <li><b>&ldquo;Separated-vocal training costs X MOS.&rdquo;</b> No clean-versus-separated SVS ablation exists.</li>
+          <li><b>&ldquo;Suno/Udio personas hold a consistent voice.&rdquo;</b> No measured evaluation exists anywhere.</li>
+          <li><b>&ldquo;PopBuTFy gives you 40&nbsp;h of English.&rdquo;</b> No public download; hours conflict 18 vs 40.4.</li>
+          <li><b>&ldquo;Suno outputs are safely licensable as training data.&rdquo;</b> Munich ruled against Suno on inputs July 2026; the downstream question is open.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 09 REJECTED & OPEN ============ -->
+  <section class="section" id="s9">
+    <div class="section-num">09</div>
+    <h2><span class="bar"></span>Rejected Claims and Open Questions</h2>
+    <h3 class="sub">Rejected outright</h3>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Claim</th><th>Why rejected</th></tr></thead>
+      <tbody>
+        <tr><td>Random init of resized embedding rows explains the English WER floor</td><td><b>Refuted by local code.</b> <code>svs_utils.py</code> sinusoidally initialises pitch, BPM and duration tokens with deliberate offsets</td></tr>
+        <tr><td>ElevenLabs PVC is an untried lever for artist singing</td><td>Official docs prohibit singing outright &mdash; &ldquo;spoken voice only&rdquo;</td></tr>
+        <tr><td>NO FAKES protects private hobbyist use</td><td>Enumerated exceptions are speech-purpose-based; no personal-use carve-out exists</td></tr>
+        <tr><td>A longer prompt clip will improve identity</td><td>SIM flattens by ~3&nbsp;s across VALL-E 2 and Voicebox</td></tr>
+        <tr><td>DAMP datasets are dead links</td><td>Zenodo records verified live; files gated behind a Smule request</td></tr>
+        <tr><td>0.4&nbsp;h is too little target-artist audio</td><td>Above every published few-shot threshold (1&ndash;10 min); a 15-min SVS finetune precedent exists</td></tr>
+        <tr><td>ESD, AVP as candidate corpora</td><td>Speech-only and beatbox respectively</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <h3 class="sub">Open questions that no source answers</h3>
+    <div class="gap">
+      <b>1.</b> Does subharmonic energy survive a neural VAE round-trip? Both halves exist in the literature; nobody joined them.<br>
+      <b>2.</b> What is the clean-versus-separated-stems penalty for SVS training, holding model and singers fixed?<br>
+      <b>3.</b> Is there an SVS data-scaling curve past 530&nbsp;h? DiTSinger shows no saturation where it stops.<br>
+      <b>4.</b> Do speaker embeddings encode rasp, growl or vocal fry at all? Probing work covers pitch, tempo and energy only.<br>
+      <b>5.</b> How much does the same-song prompt protocol inflate SVS SIM? The obvious control &mdash; prompt and target from different recordings &mdash; has never been run.<br>
+      <b>6.</b> Is step count, rather than hours, the binding constraint in cross-lingual adaptation? Five sources vary both together and isolate neither.
+    </div>
+    <h3 class="sub">Retrieval limits of this run</h3>
+    <p style="font-size:14.5px;">S.4591&rsquo;s primary statutory text was unreachable (congress.gov and govtrack both returned HTTP 403), so the tool-liability and postmortem-term details rest on law-firm and EFF quotation. The Minixhofer Interspeech 2025 scaling-law exponents were not extracted after three attempts on a binary PDF. PopBuTFy availability, Smule&rsquo;s 2026 approval latency, and OpenSinger&rsquo;s true hour count (50/66 vs 85/93) remain unresolved.</p>
+  </section>
+
+  <!-- ============ 10 FRONTIER ============ -->
+  <section class="section" id="s10">
+    <div class="section-num">10</div>
+    <h2><span class="bar"></span>The Frontier Question</h2>
+    <div class="frontier">
+      <div class="q">Does subharmonic energy &mdash; the actual acoustic carrier of rasp, growl and grit &mdash; survive a neural audio VAE round-trip?</div>
+      <p>Everything downstream depended on the answer and nobody had measured it. The voice-science literature establishes that roughness is period-doubling, distinct from jitter and shimmer. The vocoder literature establishes that singing synthesis models the waveform as periodic plus aperiodic, a decomposition with no slot for a subharmonic. The audio-VAE literature establishes that high-frequency spectral fidelity degrades in reconstruction. Three solid premises, never joined by an experiment &mdash; because the question falls between three literatures that do not cite each other.</p>
+      <p><b>Answered on 2026-08-09, after this report was drafted.</b> Four Amy stems, 4,421 voiced frames, encode&rarr;decode with no generative step, subharmonic-to-harmonic ratio measured against an F0 track taken from the original. <b>Median SHR loss: &minus;10.9&nbsp;%</b> (range &minus;1.1&nbsp;% to &minus;14.4&nbsp;%). Real, but nowhere near the disappearance the three premises jointly predicted. <b>The hypothesis is refuted: the subharmonic carrier of rasp largely survives the representation, and the VAE is not the primary reason renders score 3/10 against real Amy&rsquo;s 8/10.</b> By elimination the loss is in <em>generation</em> &mdash; the conditional-mean-seeking sampling path the over-smoothing literature describes, consistent with SVCC 2025 finding vocal technique at 37&ndash;44&nbsp;% while identity looked solved.</p>
+      <p>One structural fact surfaced before any measurement and outlasts it: <b>the VAE is asymmetric &mdash; it encodes at 16&nbsp;kHz and decodes at 48&nbsp;kHz</b> (<code>audio_vae_v2.py:439&ndash;440</code>). Everything above the 8&nbsp;kHz encode-side Nyquist is absent from the latent by construction, so the ~10&nbsp;kHz rasp partner cannot survive at any decoder quality, and everything above 8&nbsp;kHz in the output is decoder invention. Measured band deltas match exactly: the 2&ndash;3&nbsp;kHz and 4.5&ndash;5.5&nbsp;kHz bands are preserved to within half a dB, while 9&ndash;11&nbsp;kHz and 12&ndash;16&nbsp;kHz lose 1.5&ndash;6.9&nbsp;dB. Full write-up in <code>experiment-01-vae-roundtrip.md</code>.</p>
+    </div>
+  </section>
+
+  <!-- ============ REFERENCES ============ -->
+  <div class="refs" id="refs">
+    <h3>Evidence base &middot; verification status</h3>
+    <ul>
+      <li><span class="vstat ok">Confirmed</span> VocalRender (2026). <i>arXiv 2607.27768</i>. 2,300&nbsp;h corpus, ~87.5&nbsp;% SunoV5-synthetic; WER 4.44 / SIM 0.922 / RPA 0.72; <b>ground-truth SIM topline 0.918&ndash;0.929</b>; prompt = 2&ndash;8&nbsp;s from the same song. Full HTML fetched. <a href="https://arxiv.org/html/2607.27768v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Singer identity representation learning (2024). <i>arXiv 2401.05064v1</i>. Speech-trained SV models: 12.31&nbsp;% EER (H/ASP) and 14.21&nbsp;% (F-ResNet) on M4Singer; <b>~40&nbsp;% EER on VocalSet</b>. <a href="https://arxiv.org/html/2401.05064v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SVCC 2023 (2023). <i>arXiv 2306.14422</i>. 26 submissions; human-level naturalness reached, <b>no team matched target similarity</b> (~0.4 MOS gap); best objective correlate Spearman &rho;&nbsp;&asymp;&nbsp;&minus;0.63. <a href="https://arxiv.org/html/2306.14422">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SVCC 2025 extensive analysis (2025). <i>arXiv 2509.15629</i>. 33 systems; zero-shot identity comparable to GT; <b>dynamic vocal technique accuracy 37&ndash;44&nbsp;%</b>; objective metrics max Spearman &asymp;&nbsp;0.8. <a href="https://arxiv.org/abs/2509.15629">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> VoxSim (Interspeech 2024). <i>arXiv 2407.18505</i>. ~70k human ratings; ASV cosine&ndash;human correlation ~0.75 in-domain, <b>~0.50 on out-of-domain synthetic</b>. <a href="https://arxiv.org/abs/2407.18505">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Analyzing and Improving Speaker Similarity Assessment (SSW13/IS2025). <i>arXiv 2507.02176</i>. ASV embeddings capture static timbre and pitch range, neglect dynamics; channel confounders bias objective and subjective similarity alike. <a href="https://arxiv.org/abs/2507.02176">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> MiniMax-Speech (2025). <i>arXiv 2505.07916</i>. Learnable speaker encoder yields identity &ldquo;disentangled from semantic content&rdquo;; <b>LoRA used for emotion control, explicitly not timbre</b>. <a href="https://arxiv.org/html/2505.07916">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> UtterTune (2025). <i>arXiv 2508.09767v1</i>. CosyVoice2-0.5B, LoRA r=16 &alpha;=64 on Q/K/V/O of every self-attention block, 20k steps, &lt;1&nbsp;h on a 4090; accent correctness 0.472&rarr;0.975; <b>speaker similarity ~0.69 unchanged</b>. <a href="https://arxiv.org/html/2508.09767v1">arxiv.org</a></li>
+      <li><span class="vstat part">Corrected</span> Kwon, So &amp; Lee (Interspeech 2025). <i>Parameter-Efficient Fine-Tuning for Low-Resource TTS</i>. F5-TTS&rarr;Korean, KSS 12.65&nbsp;h. r=16: CER 4.906 / WER 12.625 / SIM-O 0.640 / UTMOS 3.338. r=32: 4.570 / 11.338 / 0.645 / 3.264. <b>Correction: only r=16 vs r=32 is tabulated; the rank-64 claim is prose.</b> <a href="https://www.isca-archive.org/interspeech_2025/kwon25_interspeech.pdf">isca-archive.org</a></li>
+      <li><span class="vstat part">Corrected</span> Phir Hera Fairy (2025). <i>arXiv 2505.20693</i>. 10&nbsp;h/language retains emergent behaviour at ~0.8&nbsp;% average metric loss; 10h&times;150k steps WER 31.3&nbsp;% vs 100h&times;120k steps 40.0&nbsp;%. <b>Correction: on MUSHRA 100&nbsp;h still leads (64.3 vs 61.5) &mdash; 10&nbsp;h &asymp; 100&nbsp;h, not better.</b> <a href="https://arxiv.org/html/2505.20693v1">arxiv.org</a></li>
+      <li><span class="vstat part">Corrected</span> VoxCPM finetuning documentation. r=32 speaker / r=64 style-language; LoRA &asymp;&nbsp;98&nbsp;% of full-FT speaker similarity at half VRAM; &ldquo;500+ hours&rdquo; for a new language; mix 10&ndash;20&nbsp;% original data; lr 1e-4 vs 1e-5; <code>enable_dit: true</code>. <b>Correction: &ldquo;use full FT for a new language&rdquo; is implicit, never stated. Nothing on vocabulary resize.</b> <a href="https://voxcpm.readthedocs.io/en/latest/finetuning/finetune.html">voxcpm.readthedocs.io</a></li>
+      <li><span class="vstat ok">Confirmed</span> Transinger. <i>PMC12542845</i>. VISinger2-based cross-lingual SVS, KR/EN/ZH/JP on <b>40.9&nbsp;h total</b>, IPA decomposed into letters plus diacritics. <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12542845/">ncbi.nlm.nih.gov</a></li>
+      <li><span class="vstat ok">Confirmed</span> DiaMoE-TTS (2025). <i>arXiv 2509.22727v1</i>. Unified IPA lexicon plus MoE and PEFT extends an F5-TTS ZH+EN checkpoint to unseen dialects. <a href="https://arxiv.org/html/2509.22727v1">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> BiSinger (ASRU 2023). <i>arXiv 2309.14089</i>. Shared CMU-dict phone space plus voice conversion manufactures bilingual data; also quantifies ~23&nbsp;h public English singing vs ~166&nbsp;h Chinese. <a href="https://arxiv.org/abs/2309.14089">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Shumailov et al. (2024). <i>Nature</i> 631:755&ndash;759. Recursive training on generated data causes early then late collapse &mdash; under a protocol that <b>replaces</b> real data each generation. <a href="https://www.nature.com/articles/s41586-024-07566-y">nature.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> Gerstgrasser et al. (2024). <i>arXiv 2404.01413</i>. Accumulating synthetic alongside real data bounds test error independent of iteration count &mdash; <b>no collapse</b>. <a href="https://arxiv.org/abs/2404.01413">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Alemohammad et al. (ICLR 2024). <i>arXiv 2307.01850</i>. Model Autophagy Disorder: without fresh real data, quality or diversity degrades within a few generations; cherry-picking trades diversity for realism. <a href="https://arxiv.org/abs/2307.01850">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> ACE-Opencpop / ACE-KiSing (2024). <i>arXiv 2401.17619v2</i>. 130&nbsp;h synthetic singing; synthetic pretrain &rarr; real test MOS 3.63&rarr;3.66, F0 RMSE 0.172&rarr;0.162; <b>cross-language transfer to Japanese Kiritan +0.10 MOS</b>. <a href="https://arxiv.org/html/2401.17619v2">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Speech-LM adapted to SVS (2025). <i>arXiv 2512.14657</i>. 1.7B TTS-pretrained LM on <b>135&nbsp;h synthetic singing</b> matches SOTA (SingMOS 4.09 vs 4.08); F0 RMSE lags 62.79 vs 55.83&nbsp;Hz. <a href="https://arxiv.org/html/2512.14657">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> DiTSinger (2025). <i>arXiv 2510.09016</i>. Data scaling 30&nbsp;h&rarr;530&nbsp;h with consistent gains and <b>no saturation</b>; MOS 4.02±0.06. <a href="https://arxiv.org/html/2510.09016">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> BASE TTS (2024). <i>arXiv 2402.08093</i>. Emergent abilities appear at the 1,000&rarr;10,000&nbsp;h and 100M&rarr;500M parameter transition. <a href="https://arxiv.org/pdf/2402.08093">arxiv.org</a></li>
+      <li><span class="vstat part">Corrected</span> Minixhofer, Klejch &amp; Bell (Interspeech 2025). Scaling law with a real&ndash;synthetic distribution-mismatch term. <b>Limit: exponents not extracted; binary PDF defeated three fetch attempts.</b> <a href="https://www.isca-archive.org/interspeech_2025/minixhofer25_interspeech.html">isca-archive.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Period Singer (2024). <i>arXiv 2406.09894</i>. Singing vocoders assume periodic + aperiodic decomposition; separate CVAEs per component required for naturalness. <a href="https://arxiv.org/html/2406.09894">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Voice roughness and subharmonics. <i>Journal of Voice</i> S0892199797800227; S0892199701000182. Roughness carried by subharmonics; <b>voices can be perceptually rough with normal jitter and shimmer</b>. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0892199797800227">sciencedirect.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> &ldquo;Listens like Mel&rdquo;. <i>OpenReview 5PBKxl7o49</i>. Stable Audio Open VAE reconstruction &ldquo;less faithful in tracking the ground-truth spectrum, most visibly in the high-frequency region&rdquo;. <a href="https://openreview.net/pdf?id=5PBKxl7o49">openreview.net</a></li>
+      <li><span class="vstat ok">Confirmed</span> Annotated RVC (2024). FAISS index of all training HuBERT/ContentVec 768-d vectors; top-K=8 retrieval blended by <code>index_rate</code>. <a href="https://gudgud96.github.io/2024/09/26/annotated-rvc/">gudgud96.github.io</a></li>
+      <li><span class="vstat weak">Contested</span> Seed-VC EVAL.md. Zero-shot from one utterance reportedly beats per-character RVCv2 on SECS and CER, loses on DNSMOS. <b>Author-run, objective-metric-only.</b> <a href="https://github.com/Plachtaa/seed-vc">github.com</a></li>
+      <li><span class="vstat weak">Demoted</span> AI Hub RVC training guide. 3&ndash;5 min floor, ≥10 min recommended, 250&ndash;300 epochs typical. <b>Community consensus, not peer-reviewed.</b> <a href="https://docs.aihub.gg/rvc/resources/training/">docs.aihub.gg</a></li>
+      <li><span class="vstat ok">Confirmed</span> ElevenLabs Professional Voice Cloning docs. &ldquo;Professional Voice Clones do not currently support singing. Audio recordings must consist of spoken voice only.&rdquo; 30 min minimum, 2&ndash;3&nbsp;h optimal. <a href="https://elevenlabs.io/docs/eleven-creative/voices/voice-cloning/professional-voice-cloning">elevenlabs.io</a></li>
+      <li><span class="vstat ok">Confirmed</span> GTSinger (NeurIPS 2024 D&amp;B). <i>arXiv 2409.13832</i>. 80.59&nbsp;h, 20 singers, 9 languages, phoneme alignments, technique labels, CC BY-NC-SA 4.0. <a href="https://arxiv.org/abs/2409.13832">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SingStyle111. Zenodo 10265401 + CMU paper. 12.8&nbsp;h total, CC BY 4.0; <b>English = 372 min = 6.2&nbsp;h across 6 of 8 singers, one native speaker</b>. <a href="https://zenodo.org/records/10265401">zenodo.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> SingNet (2025). <i>arXiv 2505.09325</i>. ~3,000&nbsp;h pipeline using MDX23; NSF-HiFiGAN MOS 3.52 vs GT 3.64; <b>checkpoints released, audio not</b>. <a href="https://arxiv.org/abs/2505.09325">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> CrawlSinger-OS dataset card. &gt;2,300&nbsp;h, ~776k segments, MIT, Mandarin-primary, mel-RoFormer extraction plus de-reverb. <a href="https://huggingface.co/datasets/pymaster/CrawlSinger-OS">huggingface.co</a></li>
+      <li><span class="vstat part">Corrected</span> DAMP Sing!300x30x2. Zenodo 2747436. 13.5&nbsp;TB. <b>Correction: record live, files gated behind a Smule licence request &mdash; not a dead link.</b> <a href="https://zenodo.org/records/2747436">zenodo.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> DALI. v1 5,358 / v2 7,756 songs, note-level, English-dominant, CC BY-NC-SA 4.0, <b>annotations only</b>. <a href="https://github.com/gabolsgabs/DALI">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> Kaldi-DSing task. DSing1 15.1&nbsp;h / DSing3 44.7&nbsp;h / DSing30 149.1&nbsp;h, sentence-level lyrics. <a href="https://github.com/groadabike/Kaldi-Dsing-task">github.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> Fish-Speech (2024). <i>arXiv 2411.01156</i>. 8&times;H100 for one week (AR) plus 8&times;4090 for one week (vocoder) &mdash; the cheap end of competitive pretraining. <a href="https://arxiv.org/pdf/2411.01156">arxiv.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> Tennessee ELVIS Act. TN Code §47-25-1105(a)(3) tool-distribution liability; §47-25-1107 scholarship/satire exemptions; §47-25-1104 postmortem term. <a href="https://rightofpublicity.com/statutes/tennessee">rightofpublicity.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> <i>Lehrman v. Lovo</i>, 790 F.Supp.3d 348 (S.D.N.Y. 2025). Copyright and Lanham claims dismissed; NY Civil Rights Law §§50&ndash;51, consumer protection and contract claims survived. <a href="https://www.skadden.com/insights/publications/2025/07/new-york-court-tackles-the-legality-of-ai-voice-cloning">skadden.com</a></li>
+      <li><span class="vstat part">Corrected</span> NO FAKES Act S.4591 (119th Cong.). Advanced from Senate Judiciary by voice vote 18 Jun 2026; postmortem right 10 yrs renewable to a 70-yr cap; tool liability at Sec. 2(c)(2)(B). <b>Correction: no general personal-use carve-out exists. Limit: primary text unreachable (403); rests on secondary quotation.</b> <a href="https://www.hklaw.com/en/insights/publications/2026/06/senate-judiciary-committee-advances-legislation-to-protect-name">hklaw.com</a></li>
+      <li><span class="vstat ok">Confirmed</span> European Commission, Article 50 transparency FAQ. Applies from 2 Aug 2026; <b>purely personal, non-professional use is out of scope</b>. <a href="https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act">digital-strategy.ec.europa.eu</a></li>
+      <li><span class="vstat weak">Contested</span> Creative Commons, &ldquo;Using CC-licensed works for AI training&rdquo;. On whether weights are derivative works: <b>&ldquo;It depends.&rdquo;</b> Contradicted by Guadamuz and Sado, who read the derivative case as legally limited. Unlitigated. <a href="https://creativecommons.org/using-cc-licensed-works-for-ai-training-2/">creativecommons.org</a></li>
+      <li><span class="vstat ok">Confirmed</span> <b>Local:</b> <code>src/vocalrender/model/svs_utils.py:96&ndash;257</code>. Sinusoidal init for pitch/BPM/duration tokens (refutes the random-init hypothesis); <code>:250</code> installs a fresh <code>nn.Embedding</code> (root cause of the 151M unsaved params); <code>:115&ndash;130</code> rebuilds <code>score_lm_head</code> with the same defect.</li>
+    </ul>
+  </div>
+
+  <div class="footer">Storm Research &middot; deep mode &middot; 120 distinct queries, 135 ledger rows, 81 findings graded &middot; 0 fabricated, 6 corrected, 13 not-asserted &middot; 2026-08-09 &middot; Reliability = evidence quality, not author confidence</div>
+
+</div>
+</body>
+</html>

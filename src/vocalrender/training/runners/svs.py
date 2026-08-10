@@ -398,6 +398,26 @@ class SVSRunner:
                 f"Trainable parameters: {trainable_params:,} / {total_params:,} "
                 f"({100 * trainable_params / total_params:.2f}%)"
             )
+            # Break the trainable count down by LoRA vs everything else. The
+            # SVS tokenizer extension rebuilds embed_tokens and score_lm_head
+            # as fresh modules, which come back requires_grad=True after the
+            # freeze -- previously invisible here and silently dropped by the
+            # checkpoint writer. Both are now saved; printing the split means a
+            # future architecture change that adds trainable weights announces
+            # itself instead of quietly training something we discard.
+            non_lora = [
+                (name, param.numel())
+                for name, param in self.base_model.named_parameters()
+                if param.requires_grad and "lora_" not in name
+            ]
+            if non_lora:
+                non_lora_total = sum(n for _, n in non_lora)
+                self.tracker.print(
+                    f"  of which non-LoRA: {non_lora_total:,} in {len(non_lora)} tensors "
+                    "(persisted via the requires_grad filter in save_checkpoint)"
+                )
+                for name, numel in sorted(non_lora, key=lambda x: -x[1])[:6]:
+                    self.tracker.print(f"    {name}: {numel:,}")
 
     def build_eval_context(self) -> None:
         eval_artifacts = setup_svs_eval(

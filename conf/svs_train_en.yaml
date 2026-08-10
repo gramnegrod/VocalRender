@@ -1,0 +1,144 @@
+# ================================================================
+# English SVS finetune - LoRA on a single RTX 4070 (12 GB)
+#
+# Usage:
+#   python scripts/train_vocalrender_svs.py --config_path conf/svs_train_en.yaml
+#
+# Why LoRA and not a full finetune: the model is ~2.2B parameters. In bf16 the
+# weights alone are ~4.4 GB, and AdamW moments for a full finetune would add
+# ~17 GB on top -- far past 12 GB. LoRA trains adapters over frozen weights,
+# which fits with room for activations.
+#
+# Why we start from the released VocalRender checkpoint rather than raw
+# VoxCPM2: it already knows how to sing. What it lacks is English, and the
+# English phonetics still exist in the VoxCPM2 speech pretraining underneath.
+# We are recovering them, not teaching singing from scratch.
+# ================================================================
+
+pretrained_path: pretrained_models/VocalRender
+
+preprocessed_data_path: data/preprocessed_en
+
+# gtsinger_en carries the English pronunciation signal; amy contributes
+# phrasing and style. Amy is ~186 segments against GTSinger's thousands, so
+# without upsampling she would be statistically invisible -- but pushed too
+# hard, 27 minutes of one singer would overfit. 5x is the compromise.
+train_datasets: ["gtsinger_en", "amy"]
+dataset_upsample:
+  amy: 5
+
+val_datasets: ["gtsinger_en_val", "amy_val"]
+val_samples: 32
+
+sample_rate: 48000
+
+# ================================================================
+# LoRA
+# ================================================================
+
+# r=32 gave 169M trainable (7.33% of the model) and ~1.9 GB of grads plus
+# optimizer state, which is a lot of the memory budget for something that is
+# supposed to be a light adapter. r=16 halves that and is ample for shifting
+# phoneme realization.
+lora:
+  enable_lm: true
+  enable_dit: true
+  enable_proj: false
+  r: 16
+  alpha: 32
+  dropout: 0.05
+
+# ================================================================
+# Training
+# ================================================================
+
+# NOT amp_bf16: that keeps fp32 master params, and 2.3B fp32 weights are
+# 8.70 GiB on their own. Measured on this box it pushed reserved memory to
+# 12.56 GiB against a 12 GB card, so the driver spilled to system RAM and a
+# single step took 524 seconds. True bf16 params halve the weights to
+# ~4.35 GiB and keep everything resident.
+train_precision: "bf16"
+
+# Single GPU: no sharding.
+zero_stage: 0
+fsdp_sharding_group_size: 1
+distribute: false
+activation_checkpointing: true
+
+# 12 GB forces small batches; grad accum recovers the effective batch size.
+max_batch_tokens: 2048
+batch_size: 4
+grad_accum_steps: 8
+
+val_max_batch_tokens: 1024
+val_batch_size: 2
+
+# Must be 0 on Windows: the DataLoader uses spawn, and the tokenizer wrapper
+# is a class defined inside mask_multichar_chinese_tokens(), so it cannot be
+# pickled to worker processes. Linux forks and never hits this. Samples are
+# pre-encoded Arrow latents, so loading is cheap and this costs little.
+num_workers: 0
+
+num_iters: 3000
+log_interval: 10
+
+valid_interval: 250
+audio_eval_interval: 1000
+validate_at_step_zero: true
+audio_validate_at_step_zero: false
+
+save_interval: 500
+transient_save_interval: 250
+
+timing_enabled: true
+per_rank_diagnostics: false
+
+# LoRA tolerates a higher LR than full finetuning.
+learning_rate: 0.0002
+weight_decay: 0.01
+warmup_steps: 300
+max_steps: 3000
+lr_scheduler: "inverse_sqrt"
+
+val_audio_samples: 8
+val_tb_max_samples: 8
+val_max_len: 200
+
+# ================================================================
+# Output
+# ================================================================
+
+save_path: checkpoints/svs_en_lora
+tensorboard: ""
+
+lambdas:
+  loss/diff: 1.0
+  loss/stop: 1.0
+
+# ================================================================
+# SVS specifics
+# ================================================================
+
+# No score masking: we always infer with a full score, so train that way.
+svs_mask_strategy:
+  - global
+  - paired
+svs_mask_params:
+  global_mask_prob: 0
+  pair_mask_prob: 0
+  pair_mask_rate: 0
+
+# Matches the released checkpoints and our inference path.
+prompt_audio_prob: 1.0
+prompt_max_frames: 50
+
+# ================================================================
+# Metrics
+# ================================================================
+# SingMOS needs s3prl and AES needs audiobox-aesthetics; neither is installed
+# in this venv, and both would download further models mid-run.
+eval_metrics:
+  singmos:
+    enabled: false
+  aes:
+    enabled: false

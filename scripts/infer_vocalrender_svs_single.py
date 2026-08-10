@@ -48,8 +48,18 @@ from vocalrender.model.utils import get_in_sample_rate, get_out_sample_rate
 # Model loading
 # ---------------------------------------------------------------------------
 
-def load_svs_model(ckpt_dir: str, device: str = "cuda"):
-    """Load SVS fine-tuned model from checkpoint directory."""
+def load_svs_model(ckpt_dir: str, device: str = "cuda", lora_dir: Optional[str] = None):
+    """Load SVS fine-tuned model from checkpoint directory.
+
+    Args:
+        ckpt_dir: Base checkpoint (config.json + weights + tokenizer).
+        device: Torch device.
+        lora_dir: Optional directory holding ``lora_weights.safetensors`` and
+            ``lora_config.json`` as written by training. The adapter is a few
+            hundred MB against a ~9 GB base, so one base checkpoint can be
+            paired with any number of swappable adapters rather than storing a
+            full copy of the model per finetune.
+    """
     from transformers import LlamaTokenizerFast
 
     ckpt_path = Path(ckpt_dir)
@@ -97,12 +107,39 @@ def load_svs_model(ckpt_dir: str, device: str = "cuda"):
         raise FileNotFoundError(f"AudioVAE weights not found: {vae_sf_path} or {vae_pt_path}")
     audio_vae.load_state_dict(vae_sd)
 
+    # LoRA layers must exist before the base weights land, so the adapter
+    # config is resolved here rather than after loading.
+    lora_config = None
+    lora_state = None
+    if lora_dir:
+        lora_path = Path(lora_dir)
+        with open(lora_path / "lora_config.json", encoding="utf-8") as f:
+            lora_info = json.load(f)
+        if architecture == "voxcpm2":
+            from vocalrender.model.voxcpm2 import LoRAConfig
+        else:
+            from vocalrender.model.voxcpm import LoRAConfig
+        lora_config = LoRAConfig(**lora_info["lora_config"])
+
+        weights_sf = lora_path / "lora_weights.safetensors"
+        weights_pt = lora_path / "lora_weights.ckpt"
+        if weights_sf.exists():
+            from safetensors.torch import load_file as load_safetensors
+            lora_state = load_safetensors(str(weights_sf))
+        elif weights_pt.exists():
+            blob = torch.load(str(weights_pt), map_location="cpu", weights_only=True)
+            lora_state = blob.get("state_dict", blob)
+        else:
+            raise FileNotFoundError(f"No LoRA weights in {lora_path}")
+        print(f"[SVS Single] LoRA: {len(lora_state)} tensors from {lora_path}",
+              file=sys.stderr)
+
     if architecture == "voxcpm2":
         model = ModelClass(
-            config, tokenizer, audio_vae, lora_config=None,
+            config, tokenizer, audio_vae, lora_config=lora_config,
         )
     else:
-        model = ModelClass(config, tokenizer, audio_vae, lora_config=None)
+        model = ModelClass(config, tokenizer, audio_vae, lora_config=lora_config)
 
     if sf_path.exists() and HAS_SF:
         model_sd = load_safetensors(str(sf_path))
@@ -115,6 +152,18 @@ def load_svs_model(ckpt_dir: str, device: str = "cuda"):
     for k, v in vae_sd.items():
         model_sd[f"audio_vae.{k}"] = v
     model.load_state_dict(model_sd, strict=False)
+
+    # Applied after the base weights so nothing overwrites the adapter.
+    if lora_state:
+        missing, unexpected = model.load_state_dict(lora_state, strict=False)
+        applied = sum(1 for k in lora_state if "lora_" in k)
+        if unexpected:
+            raise RuntimeError(
+                f"LoRA weights do not match this model: {len(unexpected)} "
+                f"unexpected keys, e.g. {unexpected[:3]}"
+            )
+        print(f"[SVS Single] LoRA applied: {applied} adapter tensors",
+              file=sys.stderr)
 
     from vocalrender.model.utils import get_dtype
     model = model.to(get_dtype(config.dtype)).to(device).eval()
@@ -255,6 +304,9 @@ def parse_args():
 
     parser.add_argument("--ckpt_dir", required=True,
                         help="SVS model checkpoint directory")
+    parser.add_argument("--lora_dir", default="",
+                        help="Optional LoRA adapter dir (lora_weights.safetensors "
+                             "+ lora_config.json) to apply over --ckpt_dir")
     parser.add_argument("--device", default="cuda")
 
     # Input
@@ -322,7 +374,8 @@ def main():
         sys.exit(1)
 
     # ---- Load model ----
-    model = load_svs_model(args.ckpt_dir, device=args.device)
+    model = load_svs_model(args.ckpt_dir, device=args.device,
+                           lora_dir=args.lora_dir or None)
     sample_rate = get_out_sample_rate(model)
 
     # ---- Build SVS prompt ----

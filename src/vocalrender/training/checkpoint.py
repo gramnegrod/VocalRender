@@ -196,7 +196,27 @@ def save_checkpoint(
     lora_cfg = Accelerator.unwrap(model).lora_config
 
     if lora_cfg is not None:
-        state_dict = {k: v for k, v in full_state.items() if "lora_" in k}
+        # Filter on requires_grad, not on the substring "lora_".
+        #
+        # The SVS tokenizer extension replaces base_lm.embed_tokens with a
+        # freshly constructed nn.Embedding (svs_utils.resize_token_embeddings_
+        # with_svs_init) and rebuilds score_lm_head as a new nn.Linear. Fresh
+        # modules arrive with requires_grad=True regardless of any earlier
+        # freeze, so both train -- and a name filter silently discarded them,
+        # throwing away ~151M trained parameters at every save. Inference then
+        # re-derived the embedding from its sinusoidal init, so the training
+        # signal never reached the rendered audio.
+        #
+        # Keying off requires_grad means anything that is actually being
+        # optimized is persisted, whatever it is called.
+        unwrapped_for_grad = Accelerator.unwrap(model)
+        trainable_names = {
+            name for name, param in unwrapped_for_grad.named_parameters() if param.requires_grad
+        }
+        state_dict = {
+            k: v for k, v in full_state.items() if "lora_" in k or k in trainable_names
+        }
+        extra_keys = sorted(k for k in state_dict if "lora_" not in k)
         if SAFETENSORS_AVAILABLE:
             save_file(state_dict, folder / "lora_weights.safetensors")
         else:
@@ -207,10 +227,19 @@ def save_checkpoint(
             "base_model": base_model_to_save,
             "lora_config": lora_cfg.model_dump() if hasattr(lora_cfg, "model_dump") else vars(lora_cfg),
             "svs_enabled": True,
+            "extra_trainable_keys": extra_keys,
         }
         with open(folder / "lora_config.json", "w", encoding="utf-8") as f:
             json.dump(lora_info, f, indent=2, ensure_ascii=False)
-        log("[Checkpoint] Saved LoRA weights")
+        if extra_keys:
+            extra_params = sum(state_dict[k].numel() for k in extra_keys)
+            log(
+                f"[Checkpoint] Saved LoRA weights + {len(extra_keys)} non-LoRA "
+                f"trainable tensors ({extra_params:,} params): "
+                f"{', '.join(extra_keys[:4])}"
+            )
+        else:
+            log("[Checkpoint] Saved LoRA weights")
     else:
         state_dict = {k: v for k, v in full_state.items() if not k.startswith("audio_vae.")}
         if SAFETENSORS_AVAILABLE:
