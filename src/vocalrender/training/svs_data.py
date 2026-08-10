@@ -11,6 +11,7 @@ compatibility.
 """
 
 import random
+import sys
 from typing import Dict, List, Optional, Tuple
 
 import torch
@@ -129,6 +130,9 @@ class HFPreprocessedSVSDataset(torch.utils.data.Dataset):
                 f"prompt_audio_prob must be in [0, 1], got {prompt_audio_prob}"
             )
         
+        # Counts prompt-audio read failures so a degraded path stays visible.
+        self._prompt_read_failures = 0
+
         # Build reverse lookup: sample_idx -> song_name (for same-song prompt lookup)
         self._idx_to_song: Dict[int, str] = {}
         if self.song_index:
@@ -301,9 +305,37 @@ class HFPreprocessedSVSDataset(torch.utils.data.Dataset):
             return None
 
         prompt_idx = rng.choice(other_candidates)
-        prompt_item = self.dataset[prompt_idx]
-        prompt_audio = torch.tensor(prompt_item["audio_feats"], dtype=torch.float32)
-        prompt_audio_mask_raw = torch.tensor(prompt_item["audio_mask"], dtype=torch.int32)
+
+        # Reading a second row mid-``__getitem__`` has twice crashed a long
+        # run: once as ``TypeError: not a sequence`` out of torch.tensor, once
+        # as a bare SIGSEGV with no traceback, both here. Every row loads
+        # cleanly in isolation and a full sequential sweep of all 5,485
+        # prompt-eligible rows passes, so the fault is stateful rather than a
+        # bad row -- most likely the memory-mapped Arrow table misbehaving
+        # under sustained random access on Windows. Root cause is still open.
+        #
+        # Prompt audio is optional by contract: this method already returns
+        # None on several paths and _prepend_prompt_audio handles it by
+        # training that sample without a prompt. So degrade instead of dying —
+        # losing one sample's prompt is invisible in the loss, losing a
+        # multi-day run is not. Failures are counted and logged sparsely so
+        # this cannot silently become the common path.
+        try:
+            prompt_item = self.dataset[prompt_idx]
+            prompt_audio = torch.tensor(prompt_item["audio_feats"], dtype=torch.float32)
+            prompt_audio_mask_raw = torch.tensor(prompt_item["audio_mask"], dtype=torch.int32)
+        except Exception as exc:
+            self._prompt_read_failures += 1
+            n = self._prompt_read_failures
+            if n <= 5 or n % 100 == 0:
+                print(
+                    f"[SVSData] prompt-audio read failed (#{n}) for idx={idx} "
+                    f"prompt_idx={prompt_idx}: {type(exc).__name__}: {exc}. "
+                    "Training this sample without a prompt.",
+                    file=sys.stderr, flush=True,
+                )
+            return None
+
         audio_positions = torch.where(prompt_audio_mask_raw == 1)[0]
         if len(audio_positions) == 0:
             return None
