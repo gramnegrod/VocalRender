@@ -449,8 +449,8 @@
 
     <div class="action-item">
       <div class="action-mark">02</div>
-      <div><span class="do">Fix the unsaved-parameter bug at both sites, not one.</span>
-      <p><code>svs_utils.py:250</code> installs a fresh <code>nn.Embedding</code> that arrives <code>requires_grad=True</code> after freezing &mdash; the 151M phantom trainable params. <code>svs_utils.py:115&ndash;130</code> rebuilds <code>score_lm_head</code> as a new <code>nn.Linear</code> with the same defect, which the handoff had not recorded. Either freeze both explicitly after resize, or widen the save filter beyond <code>"lora_"</code>. Note the initialisation itself is <em>fine</em> &mdash; pitch, BPM and duration tokens get sinusoidal init, which is better than the mean-of-subtokens fix the literature recommends, so the &ldquo;random init causes gibberish&rdquo; theory is dead.</p></div>
+      <div><span class="do">DONE &mdash; the unsaved-parameter bug is fixed, and the root cause was not where the code read suggested.</span>
+      <p>The mechanism was right &mdash; a fresh <code>nn.Embedding</code> installed <em>after</em> the freeze comes back <code>requires_grad=True</code> &mdash; but the site is <code>voxcpm2.py:1608&ndash;1617</code>, where <code>from_local</code> auto-resizes the embedding to match the checkpoint vocab after freezing non-LoRA params at 1561&ndash;1567. The <code>svs_utils.py</code> path never ran: the tokenizer already carried the SVS tokens, so it early-returned. Runtime confirms both halves: <code>Auto-resizing embedding: 73448 -&gt; 73850</code>, then <code>non-LoRA: 151,244,800 in 1 tensors &mdash; base_lm.embed_tokens.weight</code>. <b>Fixed by filtering the checkpoint writer on <code>requires_grad</code> rather than the substring <code>"lora_"</code></b>, which covers this site, the dormant <code>score_lm_head</code> defect, and anything similar added later. Also confirmed: r=32 LoRA is <b>18,087,936 params</b> &mdash; the old config&rsquo;s &ldquo;r=32 costs 169M&rdquo; note was measuring the phantom.</p></div>
     </div>
 
     <div class="action-item">
