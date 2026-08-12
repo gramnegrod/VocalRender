@@ -5,7 +5,10 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2607.27768-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2607.27768)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-VocalRender-FFD21E?logo=huggingface)](https://huggingface.co/pymaster/VocalRender)
 [![Hugging Face Dataset](https://img.shields.io/badge/Hugging%20Face-CrawlSinger--OS-FFD21E?logo=huggingface)](https://huggingface.co/datasets/pymaster/CrawlSinger-OS)
+[![Online Inference Demo](https://img.shields.io/badge/Hugging%20Face-Online%20Inference%20Demo-FFD21E?logo=huggingface)](https://huggingface.co/spaces/pymaster/VocalRender-demo)
 [![Audio Demo](https://img.shields.io/badge/Audio-Demo-183d32.svg)](https://pymaster17.github.io/VocalRender/)
+
+Try both released checkpoints in your browser with the **[online inference demo](https://huggingface.co/spaces/pymaster/VocalRender-demo)**.
 
 **VocalRender** is a score-native singing voice synthesis (SVS) system designed
 for real-world composition. It directly renders composer-oriented symbolic
