@@ -104,3 +104,48 @@ was one number in a config file.
   is still the untried mitigation.
 - n=3 per cell throughout. The pooled test is solid; individual pairwise
   comparisons are not.
+
+---
+
+## E3 addendum — the 9.0 was the opening only (CORRECTION)
+
+2026-08-15. The listener reported that renders "sounded good but only at the
+very first 2-3 seconds." Tested by splitting renders and judging head vs tail
+with the same voice judge.
+
+| render | first 3 s | last 3 s |
+|---|---:|---:|
+| chunk000 | **9.0** | judge failed ×3 |
+| chunk001 | **9.0** | **1.0** |
+| chunk007 | judge failed ×3 | **2.0** |
+
+**This corrects Experiment 04.** The whole-clip 9.0 scores were driven by the
+opening. The defensible claim is not "VocalRender is indistinguishable from real
+Amy" but "**indistinguishable for roughly the first three seconds, then it
+decays badly**". An LLM judge scoring an 8-second clip apparently weights the
+first impression heavily; a human caught it immediately. Worth remembering: the
+judge is useful but it is not a listener.
+
+Two of six calls failed persistently (`n_ok: 0`) even after retries — the known
+exception-swallowing behaviour. Four cells is thin, but 9/9 versus 1/2 is not a
+marginal difference.
+
+### This reverses the chunking verdict
+
+E1 ruled out chunking because *word* errors track relative position, so shorter
+chunks would just produce more bad second-halves. That reasoning still holds
+**for words**. But timbre decay is a different failure with a different
+signature: it appears to track absolute time since the prompt, which is exactly
+what re-anchoring every few seconds fixes. Chunking is back on the table for
+voice, having been correctly rejected for words.
+
+The obvious test: render in ~3 s pieces, crossfade, and judge head and tail of
+the concatenation. Risks are audible seams and broken musical phrasing across
+boundaries.
+
+### Mechanism, unconfirmed
+
+Consistent with prompt-conditioning influence weakening as generation proceeds —
+the prompt latents are prepended once, and their effect on attention plausibly
+decays with distance. Not measured. An alternative worth ruling out is that the
+VAE decode or the F0 track drifts independently of the prompt.
