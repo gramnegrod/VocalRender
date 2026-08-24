@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VocalRender → Suno-quality music tool</title>
+  <style>
+    :root {
+      --ink: #10202e;
+      --muted: #536575;
+      --paper: #f5f7f4;
+      --surface: #ffffff;
+      --line: #d8e0dc;
+      --navy: #10283a;
+      --teal: #087f75;
+      --teal-soft: #dff4ef;
+      --amber: #9b6513;
+      --amber-soft: #fff1cf;
+      --red: #9b3b3b;
+      --red-soft: #fae6e3;
+      --blue: #215e8a;
+      --blue-soft: #e3f0f8;
+      --shadow: 0 14px 38px rgba(16, 40, 58, .10);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; max-width: 100%; overflow-x: hidden; }
+    body { margin: 0; max-width: 100%; overflow-x: hidden; background: var(--paper); color: var(--ink); font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    a { color: #086a75; text-underline-offset: 3px; }
+    a:hover { color: #064f58; }
+    .topbar { position: sticky; top: 0; z-index: 20; background: rgba(16, 40, 58, .96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.12); }
+    .topbar-inner { width: 100%; min-width: 0; max-width: 1220px; margin: auto; padding: 11px 24px; display: flex; align-items: center; gap: 24px; }
+    .brand { color: white; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+    nav { min-width: 0; display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
+    nav a { color: #dce9ee; text-decoration: none; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    main { width: 100%; max-width: 1220px; margin: 0 auto; padding: 34px 24px 80px; }
+    .hero { border-radius: 24px; overflow: hidden; background: linear-gradient(130deg, #10283a 0%, #123b4d 55%, #087f75 135%); color: white; padding: 52px 54px 46px; box-shadow: var(--shadow); position: relative; }
+    .hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -130px; top: -155px; border: 62px solid rgba(255,255,255,.07); border-radius: 50%; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 800; color: #8fe5d4; }
+    h1 { margin: 10px 0 16px; max-width: 850px; font-size: clamp(35px, 6vw, 68px); line-height: 1.02; letter-spacing: -.045em; }
+    .hero p { margin: 0; max-width: 850px; color: #dbe8ec; font-size: 19px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 26px; }
+    .pill { border: 1px solid rgba(255,255,255,.24); background: rgba(255,255,255,.08); padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    section { scroll-margin-top: 66px; margin-top: 56px; }
+    h2 { margin: 0 0 18px; font-size: clamp(26px, 4vw, 40px); line-height: 1.1; letter-spacing: -.025em; }
+    h3 { margin: 0 0 9px; font-size: 20px; line-height: 1.25; }
+    p { margin: 0 0 15px; }
+    .lead { max-width: 900px; color: var(--muted); font-size: 18px; }
+    .decision { display: grid; grid-template-columns: 1.35fr .65fr; gap: 18px; margin-top: -20px; position: relative; z-index: 2; padding: 0 24px; }
+    .decision > div { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); }
+    .decision strong.big { display: block; margin-bottom: 7px; font-size: 22px; line-height: 1.22; color: var(--teal); }
+    .signal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 22px; }
+    .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+    .metric b { display: block; font-size: 29px; line-height: 1; color: var(--navy); margin-bottom: 8px; }
+    .metric span { color: var(--muted); font-size: 14px; }
+    .callout { border-left: 5px solid var(--teal); background: var(--teal-soft); border-radius: 4px 14px 14px 4px; padding: 19px 22px; margin: 22px 0; }
+    .callout.warn { border-color: var(--amber); background: var(--amber-soft); }
+    .callout.danger { border-color: var(--red); background: var(--red-soft); }
+    .callout p:last-child { margin-bottom: 0; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; }
+    .card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 17px; padding: 22px; }
+    .card p:last-child { margin-bottom: 0; }
+    .tag { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 11px; }
+    .tag.go { color: #07584f; background: var(--teal-soft); }
+    .tag.test { color: #6f4809; background: var(--amber-soft); }
+    .tag.api { color: #154b72; background: var(--blue-soft); }
+    .tag.no { color: #743030; background: var(--red-soft); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: white; }
+    table { width: 100%; border-collapse: collapse; min-width: 860px; font-size: 14px; }
+    th { background: #edf2ef; color: #314653; text-align: left; padding: 12px 13px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--line); }
+    td { padding: 13px; border-bottom: 1px solid #e5ebe7; vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #f8faf9; }
+    .yes { color: #087267; font-weight: 800; }
+    .maybe { color: #8a5a0c; font-weight: 800; }
+    .nope { color: #963a3a; font-weight: 800; }
+    .score { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: #e7efec; font-weight: 800; }
+    .architecture { display: grid; grid-template-columns: 1fr 38px 1.25fr 38px 1fr 38px 1fr; align-items: stretch; gap: 8px; margin: 24px 0; }
+    .node { min-height: 134px; display: flex; flex-direction: column; justify-content: center; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 17px; }
+    .node.primary { border: 2px solid var(--teal); background: #f5fffc; }
+    .arrow { display: grid; place-items: center; color: var(--teal); font-size: 28px; font-weight: 900; }
+    .small { color: var(--muted); font-size: 13px; }
+    .options { display: grid; gap: 16px; }
+    .option { display: grid; grid-template-columns: 56px 1fr 190px; gap: 18px; align-items: start; background: white; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+    .option.recommended { border: 2px solid var(--teal); box-shadow: 0 10px 28px rgba(8,127,117,.10); }
+    .option-number { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: white; background: var(--navy); font-size: 21px; font-weight: 900; }
+    .option.recommended .option-number { background: var(--teal); }
+    .option aside { color: var(--muted); font-size: 13px; border-left: 1px solid var(--line); padding-left: 17px; }
+    .option ul, .plan ul { padding-left: 19px; margin: 10px 0 0; }
+    .option li, .plan li { margin: 5px 0; }
+    .timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; counter-reset: phase; }
+    .phase { position: relative; background: white; border: 1px solid var(--line); border-radius: 16px; padding: 21px; }
+    .phase::before { counter-increment: phase; content: counter(phase); display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: var(--teal); color: white; font-weight: 900; margin-bottom: 13px; }
+    .phase .when { color: var(--teal); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 900; }
+    .gate { background: #10283a; color: #edf6f7; border-radius: 18px; padding: 25px; }
+    .gate h3 { color: #8fe5d4; }
+    .gate ul { margin-bottom: 0; }
+    .sources { columns: 2; column-gap: 38px; font-size: 13px; }
+    .sources li { break-inside: avoid; margin: 0 0 9px; padding-left: 3px; }
+    footer { border-top: 1px solid var(--line); margin-top: 52px; padding-top: 22px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 900px) {
+      .hero { padding: 38px 28px; }
+      .decision { grid-template-columns: 1fr; padding: 0 12px; }
+      .grid2, .signal, .timeline { grid-template-columns: 1fr; }
+      .architecture { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); height: 26px; }
+      .option { grid-template-columns: 48px 1fr; }
+      .option aside { grid-column: 2; border-left: 0; border-top: 1px solid var(--line); padding: 12px 0 0; }
+      .sources { columns: 1; }
+    }
+    @media (max-width: 560px) {
+      main { padding: 20px 14px 60px; }
+      .topbar-inner { padding: 10px 14px; gap: 16px; }
+      .brand { font-size: 13px; }
+      .hero { padding: 32px 22px 38px; border-radius: 18px; }
+      h1 { font-size: 38px; overflow-wrap: anywhere; }
+      .hero p { font-size: 17px; }
+      .decision { padding: 0 8px; }
+      .decision > div, .metric, .option, .phase, .node { min-width: 0; }
+      .meta { gap: 7px; }
+      .pill { font-size: 11px; }
+    }
+    @media print {
+      .topbar { display: none; }
+      body { background: white; }
+      main { padding: 0; }
+      section { break-inside: avoid; }
+      .hero { border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">VOCALRENDER / DECISION BRIEF</div>
+      <nav aria-label="Report navigation">
+        <a href="#decision">Decision</a>
+        <a href="#status">Current state</a>
+        <a href="#models">Model survey</a>
+        <a href="#patterns">What worked</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#options">Options</a>
+        <a href="#plan">90-day plan</a>
+        <a href="#sources">Sources</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Deep research • 16 August 2026</div>
+      <h1>Keep the magic. Replace the obligation.</h1>
+      <p>VocalRender’s opening vocal identity is worth protecting, but it should not be forced to become an entire Suno competitor. Build a model-agnostic music workstation around it, then let controlled bake-offs decide each engine.</p>
+      <div class="meta">
+        <span class="pill">104 search queries</span>
+        <span class="pill">52-source decision ledger</span>
+        <span class="pill">30 selected citations</span>
+        <span class="pill">Current hardware verified</span>
+      </div>
+    </header>
+
+    <div class="decision" id="decision">
+      <div>
+        <span class="tag go">Recommended</span>
+        <strong class="big">Build the hybrid router; test ACE-Step 1.5 now.</strong>
+        <p>Use ACE-Step 1.5 2B as the first local full-song backbone, keep VocalRender as the experimental score-controlled voice layer, and benchmark every golden prompt against Lyria 3 Pro and Eleven Music v2. Add MiniMax Music3 as soon as both local GPUs are visible.</p>
+      </div>
+      <div>
+        <span class="tag test">Do not do yet</span>
+        <strong class="big" style="color:var(--amber)">Do not replace VocalRender wholesale.</strong>
+        <p>Its best two to three seconds may be the project’s only demonstrated differentiated asset. Isolate and test it before discarding it.</p>
+      </div>
+    </div>
+
+    <section id="status">
+      <h2>Where the project really is</h2>
+      <p class="lead">The prototype has crossed an important threshold—one short passage sounds unusually convincing—but it has not yet crossed the product threshold of stable identity, correct lyrics, full-song structure, and repeatable editing.</p>
+      <div class="signal">
+        <div class="metric"><b>~2–3 s</b><span>Best current identity window before the voice noticeably drifts.<sup><a href="#ref-1">1</a></sup></span></div>
+        <div class="metric"><b>26.95%</b><span>Mean WER at CFG 3.0 in the current local evaluation path; useful directionally, not a universal score.</span></div>
+        <div class="metric"><b>1 × 12 GB</b><span>Only the RTX 4070 was visible to CUDA during this audit; the 3090 was not.</span></div>
+      </div>
+      <div class="callout">
+        <h3>What the two-second result means</h3>
+        <p>It is evidence that the conditioning can capture the desired timbre. It is not evidence that the model can sustain it. The next experiment should repeatedly re-inject the same reference every 2.5, 3, and 4 seconds, with several overlaps/crossfades, then score the head, middle, tail, seams, lyrics, and melody separately. A similar long-form drift pattern has been reported in VoxCPM, but its proposed chunking workaround is not yet proven.<sup><a href="#ref-2">2</a> <a href="#ref-3">3</a></sup></p>
+      </div>
+      <div class="callout danger">
+        <h3>Product boundary</h3>
+        <p>The Amy-like path is a research benchmark, not the product voice. Current local data terms and voice-rights constraints require a consented/original voice catalog, provenance records, revocation, and explicit disclosure before commercialization.<sup><a href="#ref-28">28</a> <a href="#ref-29">29</a></sup></p>
+      </div>
+    </section>
+
+    <section id="target">
+      <h2>The target moved: Suno is now a studio</h2>
+      <p class="lead">Competing on waveform quality alone is no longer enough. Suno now combines v5.5 generation with owned-voice features, section editing, stems, MIDI prompting, effects, automation, and multitrack export.<sup><a href="#ref-23">23</a> <a href="#ref-24">24</a></sup></p>
+      <div class="grid2">
+        <div class="card">
+          <span class="tag go">Audio bar</span>
+          <h3>A coherent, finished song</h3>
+          <p>Stable structure, correct lyrics, expressive lead vocal, genre-faithful arrangement, and a mix that survives headphones and speakers.</p>
+        </div>
+        <div class="card">
+          <span class="tag api">Workflow bar</span>
+          <h3>A revision-friendly workstation</h3>
+          <p>Regenerate one section, swap a singer, preserve the rest, expose stems, import melody/MIDI, compare variations, and export to a DAW.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="models">
+      <h2>Best available model shortlist</h2>
+      <p class="lead">This is an availability-and-fit ranking, not an unearned audio ranking. Vendor listening tests conflict, so the report separates “released and runnable” from “sounds best in its own paper.”</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th>Best role</th><th>Why it matters</th><th>Fit now</th><th>License / dependency</th><th>Decision</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ACE-Step 1.5 2B / XL</strong></td><td>Local full-song backbone</td><td>Released; reference, cover, repaint, LoRA, long songs; 2B documented for 8–16 GB and XL can offload.<sup><a href="#ref-4">4</a> <a href="#ref-5">5</a></sup></td><td><span class="yes">2B: yes</span><br><span class="maybe">XL: experiment</span></td><td>MIT</td><td><strong>Test first</strong></td></tr>
+            <tr><td><strong>MiniMax Music3</strong></td><td>High-upside open full-song backbone</td><td>Fresh five-minute hierarchical model with structured vocal and arrangement control.<sup><a href="#ref-6">6</a></sup></td><td><span class="nope">Blocked today</span><br>Official setup uses two CUDA GPUs.</td><td>Community license; attribution, consent, and revenue conditions.<sup><a href="#ref-7">7</a></sup></td><td><strong>Test when 3090 returns</strong></td></tr>
+            <tr><td><strong>HeartMuLa 3B</strong></td><td>Secondary local song baseline</td><td>Released Apache model, multi-minute songs, single-GPU lazy load.<sup><a href="#ref-8">8</a></sup></td><td><span class="maybe">Likely</span></td><td>Apache-2.0</td><td>Second-tier bake-off; not a singer-reference core.<sup><a href="#ref-9">9</a></sup></td></tr>
+            <tr><td><strong>LeVo2</strong></td><td>Research reference</td><td>Excellent paper architecture: semantic planner plus separate vocal/accompaniment refinement.<sup><a href="#ref-10">10</a></sup></td><td><span class="nope">No</span><br>Repo 404; checkpoint inaccessible.</td><td>Live terms/artifacts not verifiable.</td><td>Watch, do not build on it.</td></tr>
+            <tr><td><strong>Stable Audio 3 Medium</strong></td><td>Instrumental, sound design, inpainting</td><td>Released 1.4B long-audio model with documented sub-7 GB peak VRAM.<sup><a href="#ref-11">11</a></sup></td><td><span class="yes">Yes</span></td><td>Community license; revenue threshold.<sup><a href="#ref-12">12</a></sup></td><td>Useful specialist, not lead singer.</td></tr>
+            <tr><td><strong>SoulX-Singer SVC</strong></td><td>Zero-shot vocal identity layer</td><td>New released audio-to-audio SVC path, language-agnostic timbre/style transfer.<sup><a href="#ref-13">13</a></sup></td><td><span class="maybe">Test</span></td><td>Apache-2.0</td><td>Fresh high-priority bake-off.</td></tr>
+            <tr><td><strong>Seed-VC / Vevo2</strong></td><td>Vocal conversion and repair</td><td>Strong practical SVC baseline plus a newer unified singing/speech generation and editing system.<sup><a href="#ref-14">14</a> <a href="#ref-15">15</a></sup></td><td><span class="maybe">Test</span></td><td>Seed code GPL; Vevo2 requires model/data audit.</td><td>Compete for the vocal slot.</td></tr>
+            <tr><td><strong>Google Lyria 3 Pro</strong></td><td>Commercial quality ceiling / optional beta backend</td><td>Full songs, custom lyrics, section timestamps, 44.1 kHz stereo, SynthID; $0.08/request in preview.<sup><a href="#ref-16">16</a> <a href="#ref-17">17</a></sup></td><td><span class="yes">API</span></td><td>Preview, single-turn, artist-voice safety blocks.</td><td><strong>Benchmark immediately</strong></td></tr>
+            <tr><td><strong>Eleven Music v2</strong></td><td>Commercial editing/API reference</td><td>References, sections, transitions, inpainting, up to five minutes; $0.15/minute.<sup><a href="#ref-18">18</a> <a href="#ref-19">19</a></sup></td><td><span class="yes">API</span></td><td>Pure-play co-branding and resale/media restrictions.<sup><a href="#ref-20">20</a> <a href="#ref-21">21</a></sup></td><td>Benchmark; negotiate before product use.</td></tr>
+            <tr><td><strong>Qwen-Music / WanSong</strong></td><td>Architecture watchlist</td><td>Impressive 2026 papers with planning, long generation, editing, and/or separate stems.<sup><a href="#ref-30">30</a></sup></td><td><span class="nope">No verified weights</span></td><td>Unresolved</td><td>Watch, do not wait for them.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <h3>Why there is no honest “best model” winner yet</h3>
+        <p>ACE-Step, HeartMuLa, LeVo2, and newer research systems use different prompts, commercial model versions, raters, and metrics. Some papers reverse each other’s rankings. Automated audio judges also have measurable bias, so same-prompt blind listening is the deciding experiment.<sup><a href="#ref-25">25</a> <a href="#ref-26">26</a></sup></p>
+      </div>
+    </section>
+
+    <section id="patterns">
+      <h2>What others did in the same situation</h2>
+      <p class="lead">The repeated lesson is not “find one bigger checkpoint.” Teams split the problem where quality fails, then make those parts independently replaceable.</p>
+      <div class="grid2">
+        <div class="card"><span class="tag go">Pattern 1</span><h3>Plan globally, render locally</h3><p>ACE-Step, MiniMax Music3, HeartMuLa, LeVo2, and Alibaba’s frontier system use separate planning/semantic and acoustic/rendering stages. This keeps song-level intent from depending on one long raw-audio trajectory.<sup><a href="#ref-5">5</a> <a href="#ref-6">6</a> <a href="#ref-27">27</a></sup></p></div>
+        <div class="card"><span class="tag go">Pattern 2</span><h3>Split vocals from accompaniment</h3><p>LeVo2 refines vocal and accompaniment streams separately; AccompGen builds accompaniment around an isolated vocal. That is a direct match for VocalRender’s narrow but potentially valuable vocal strength.<sup><a href="#ref-10">10</a> <a href="#ref-22">22</a></sup></p></div>
+        <div class="card"><span class="tag go">Pattern 3</span><h3>Generate performance, then convert identity</h3><p>SoulX-Singer, Seed-VC, and Vevo2 treat singer identity/style as a specialist audio-to-audio stage. This avoids asking the composition model to also be the best voice-cloner.<sup><a href="#ref-13">13</a> <a href="#ref-14">14</a> <a href="#ref-15">15</a></sup></p></div>
+        <div class="card"><span class="tag test">Pattern 4</span><h3>Re-anchor short windows when self-conditioning drifts</h3><p>Practitioners confronting VoxCPM’s long-form drift proposed splitting audio and reinjecting the original prompt. VocalRender’s failure starts at a similar boundary; this makes chunking the next controlled test, not a guaranteed solution.<sup><a href="#ref-3">3</a></sup></p></div>
+        <div class="card"><span class="tag api">Pattern 5</span><h3>Turn generation into an editable studio</h3><p>Suno’s product moved into stems, section replacement, MIDI, effects, automation, and multitrack export. The workflow remains useful even as the underlying model changes.<sup><a href="#ref-23">23</a> <a href="#ref-24">24</a></sup></p></div>
+        <div class="card"><span class="tag no">Pattern to avoid</span><h3>Trusting one vendor leaderboard</h3><p>Model papers use incompatible prompts, raters, and commercial baselines; automated judges introduce their own bias. Strong teams freeze prompts and listen blind to complete songs and time slices.<sup><a href="#ref-25">25</a> <a href="#ref-26">26</a></sup></p></div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Recommended architecture</h2>
+      <p class="lead">Treat models as replaceable engines. The durable product is the song specification, evaluation harness, editing workflow, consented voice system, and the ability to route each task to the best renderer.</p>
+      <div class="architecture" aria-label="Recommended processing pipeline">
+        <div class="node"><h3>1. Song brief</h3><span class="small">Lyrics • sections • chords • tempo • melody/MIDI • references • consented voice ID</span></div>
+        <div class="arrow">→</div>
+        <div class="node primary"><h3>2. Replaceable song backbone</h3><span class="small">ACE now • Lyria/Eleven benchmark • MiniMax next • future engines through one adapter</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><h3>3. Stem + vocal layer</h3><span class="small">Lead/accompaniment separation • VocalRender re-anchor • SoulX / Vevo2 / Seed-VC</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><h3>4. Studio</h3><span class="small">Section regenerate • comp takes • inpaint • effects • mix • export stems/MIDI/project</span></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h3>The product moat</h3><p>Not one checkpoint: a reproducible song manifest, controllable edits, consistent consented voices, automatic candidate ranking, and a listener-tested workflow that survives model churn.</p></div>
+        <div class="card"><h3>The model moat</h3><p>If the re-anchored VocalRender experiment works, the distinctive asset is a score-native identity renderer that can replace only selected phrases without regenerating the song.</p></div>
+      </div>
+    </section>
+
+    <section id="options">
+      <h2>Five viable paths</h2>
+      <div class="options">
+        <article class="option recommended">
+          <div class="option-number">1</div>
+          <div><span class="tag go">Recommended</span><h3>Hybrid, model-agnostic workstation</h3><p>ACE-Step 1.5 becomes the first local song engine. Lyria and Eleven define the quality ceiling. VocalRender, SoulX, Seed-VC, and Vevo2 compete for the vocal layer; Stable Audio handles instrumental repair.</p><ul><li>Preserves the two-second breakthrough.</li><li>Works with the currently visible 4070.</li><li>Avoids permanent coupling to today’s model winner.</li></ul></div>
+          <aside><strong>Time to meaningful prototype</strong><br>2–5 weeks<br><br><strong>Main risk</strong><br>Integration and stem/vocal artifacts<br><br><strong>Upside</strong><br>Best balance of speed, ownership, and differentiation</aside>
+        </article>
+        <article class="option">
+          <div class="option-number">2</div>
+          <div><span class="tag api">Fastest quality</span><h3>API-first product</h3><p>Build the editor around Lyria 3 Pro, with Eleven Music as a second provider. At current list prices, 1,000 full-song Lyria generations are about $80; 1,000 three-minute Eleven generations are about $450.</p><ul><li>Fastest route to polished songs and user feedback.</li><li>Minimal inference operations.</li><li>Good way to establish the objective quality ceiling.</li></ul></div>
+          <aside><strong>Time</strong><br>1–3 weeks<br><br><strong>Main risk</strong><br>Preview/vendor policy, co-branding, lock-in<br><br><strong>Best use</strong><br>Benchmark and optional early beta</aside>
+        </article>
+        <article class="option">
+          <div class="option-number">3</div>
+          <div><span class="tag test">Highest open upside</span><h3>MiniMax Music3 open core</h3><p>Restore both GPUs, run the official dual-GPU topology, and compare it directly with ACE and the APIs. Its global/local planner and renderer most closely resemble the current frontier recipe.</p><ul><li>Five-minute end-to-end songs.</li><li>Structured arrangement and vocal descriptions.</li><li>Weights are available rather than paper-only.</li></ul></div>
+          <aside><strong>Time</strong><br>After GPU visibility is fixed<br><br><strong>Main risk</strong><br>Memory fit, immature release, attribution/terms<br><br><strong>Decision</strong><br>Do not block Option 1 on it</aside>
+        </article>
+        <article class="option">
+          <div class="option-number">4</div>
+          <div><span class="tag test">Differentiated R&amp;D</span><h3>Repair VocalRender as a specialist</h3><p>Test prompt-reanchored chunks; if that works, move toward globally injected singer embeddings, overlap-aware training, and phrase-level score/voice replacement. Pair it with a separate accompaniment engine—a pattern supported by vocals-to-accompaniment research.<sup><a href="#ref-22">22</a></sup></p><ul><li>Highest chance of a unique controllable vocal feature.</li><li>Keeps research scope narrow enough for local fine-tuning.</li><li>Does not solve arrangement or mastering by itself.</li></ul></div>
+          <aside><strong>Time</strong><br>1–2 weeks for the decisive test; months for architecture work<br><br><strong>Main risk</strong><br>Seams, phrasing discontinuity, identity still drifts</aside>
+        </article>
+        <article class="option">
+          <div class="option-number">5</div>
+          <div><span class="tag no">Not now</span><h3>Train a new frontier foundation model</h3><p>Assemble a rights-clean catalog and train a global planner, local sequence model, and audio renderer. Current frontier work uses billions of parameters and enormous song collections, far beyond this machine’s practical foundation-training envelope.<sup><a href="#ref-27">27</a></sup></p><ul><li>Maximum long-term control.</li><li>Maximum data, compute, rights, and research burden.</li><li>Only rational after the product and narrow differentiator are validated.</li></ul></div>
+          <aside><strong>Time</strong><br>12–24+ months<br><br><strong>Main risk</strong><br>Capital and data dwarf the current uncertainty<br><br><strong>Decision</strong><br>No-go as the next step</aside>
+        </article>
+      </div>
+    </section>
+
+    <section id="plan" class="plan">
+      <h2>Execution plan</h2>
+      <p class="lead">The sequence is designed to answer “is the voice magic durable?” and “which backbone is actually best?” before expensive architecture work.</p>
+      <div class="timeline">
+        <article class="phase"><div class="when">Days 1–3</div><h3>Freeze the test</h3><ul><li>Six song briefs covering ballad, pop, rock, soul, country, and dense rap.</li><li>Three consented/original voice references.</li><li>Save lyrics, MIDI/score, references, seeds, stems, runtimes, and failures in one song manifest.</li></ul></article>
+        <article class="phase"><div class="when">Days 3–7</div><h3>Run the decisive experiments</h3><ul><li>VocalRender chunks: 2.5/3/4 s × 100/200/400 ms overlaps.</li><li>ACE-Step 1.5 2B on the 4070; try XL with offload only after 2B works.</li><li>Same briefs through Lyria 3 Pro and Eleven Music v2.</li></ul></article>
+        <article class="phase"><div class="when">Weeks 2–5</div><h3>Build the router + studio spine</h3><ul><li>One adapter interface for local/API engines.</li><li>Stem ingestion, waveform/section timeline, regenerate-one-section, A/B take comping.</li><li>SoulX, Seed-VC, and Vevo2 vocal bake-off over the best source vocal.</li></ul></article>
+        <article class="phase"><div class="when">Weeks 6–12</div><h3>Converge on a product</h3><ul><li>Restore 3090 visibility and test MiniMax Music3.</li><li>Choose one default and one fallback engine from measured results.</li><li>Add consent, provenance, disclosure, revocation, exports, and a closed alpha.</li></ul></article>
+      </div>
+
+      <div class="grid2" style="margin-top:18px">
+        <div class="gate">
+          <h3>Backbone go/no-go gate</h3>
+          <ul>
+            <li>At least 90% of three-minute runs finish without structural collapse.</li>
+            <li>Median English WER ≤15% on the frozen suite.</li>
+            <li>At least 40% blind preference against the stronger API baseline, with ties allowed.</li>
+            <li>No single dimension—vocal, melody, structure, arrangement, mix, musicality—scores below 3/5 median.</li>
+          </ul>
+        </div>
+        <div class="gate">
+          <h3>Voice-layer go/no-go gate</h3>
+          <ul>
+            <li>Head, middle, and tail identity differ by ≤0.5 on a five-point listener scale.</li>
+            <li>Audible seam rate below 10% of transitions.</li>
+            <li>WER worsens by no more than five absolute points versus the source vocal.</li>
+            <li>Every product voice has explicit consent, provenance, and a revocation path.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="small" style="margin-top:12px">These are proposed engineering gates, not claims that any current model meets them. SongBench’s seven dimensions are a useful rubric; listener preference remains primary.<sup><a href="#ref-25">25</a></sup></p>
+    </section>
+
+    <section id="risks">
+      <h2>Risk controls that change the design</h2>
+      <div class="grid2">
+        <div class="card"><h3>Do not train on Suno output</h3><p>Current Suno terms bar using the service or outputs to build or train a competing service. Use independently licensed, public-domain, commissioned, or consented material instead.<sup><a href="#ref-24">24</a></sup></p></div>
+        <div class="card"><h3>Keep APIs behind adapters</h3><p>Lyria is preview-only; Eleven adds pure-play co-branding and usage constraints. A provider outage or terms change must not invalidate saved projects.</p></div>
+        <div class="card"><h3>Human authorship must be visible</h3><p>Song manifests, lyric/section/MIDI edits, take selection, and detailed transformations are useful product features and evidence of human creative control. Copyrightability remains fact-specific.<sup><a href="#ref-28">28</a></sup></p></div>
+        <div class="card"><h3>Judge the whole song in time slices</h3><p>Measure opening, middle, and tail separately. The current aggregate judge missed the most important failure: a great opening followed by a collapsing identity.</p></div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h2>Selected sources</h2>
+      <p class="lead">Thirty sources are cited below; the complete 52-row source ledger records inclusions, demotions, and exclusions. Accessed 2026-08-16.</p>
+      <ol class="sources">
+        <li id="ref-1"><a href="../vocalrender-english-path-forward/experiment-05-hallucination.md">Local Experiment 05</a>.</li>
+        <li id="ref-2"><a href="https://arxiv.org/abs/2607.27768">VocalRender paper</a>.</li>
+        <li id="ref-3"><a href="https://github.com/OpenBMB/VoxCPM/issues/302">VoxCPM long-form drift issue #302</a>.</li>
+        <li id="ref-4"><a href="https://github.com/ace-step/ACE-Step-1.5">ACE-Step 1.5 official repository</a>.</li>
+        <li id="ref-5"><a href="https://arxiv.org/abs/2602.00744">ACE-Step 1.5 paper</a>.</li>
+        <li id="ref-6"><a href="https://github.com/MiniMax-AI/MiniMax-Music3">MiniMax Music3 official repository</a>.</li>
+        <li id="ref-7"><a href="https://huggingface.co/MiniMaxAI/MiniMax-Music3/blob/main/LICENSE">MiniMax Music3 Community License</a>.</li>
+        <li id="ref-8"><a href="https://github.com/HeartMuLa/heartlib">HeartMuLa official repository</a>.</li>
+        <li id="ref-9"><a href="https://arxiv.org/abs/2601.10547">HeartMuLa paper</a>.</li>
+        <li id="ref-10"><a href="https://arxiv.org/abs/2606.30642">LeVo2 paper</a>.</li>
+        <li id="ref-11"><a href="https://huggingface.co/stabilityai/stable-audio-3-medium">Stable Audio 3 Medium model card</a>.</li>
+        <li id="ref-12"><a href="https://stability.ai/community-license-agreement">Stability AI Community License</a>.</li>
+        <li id="ref-13"><a href="https://github.com/Soul-AILab/SoulX-Singer">SoulX-Singer official repository</a>.</li>
+        <li id="ref-14"><a href="https://github.com/Plachtaa/seed-vc">Seed-VC official repository</a>.</li>
+        <li id="ref-15"><a href="https://github.com/open-mmlab/Amphion">Amphion / Vevo2 official repository</a>.</li>
+        <li id="ref-16"><a href="https://ai.google.dev/gemini-api/docs/music-generation">Gemini API Lyria 3 music generation docs</a>.</li>
+        <li id="ref-17"><a href="https://ai.google.dev/gemini-api/docs/pricing#lyria-3">Gemini API Lyria 3 pricing</a>.</li>
+        <li id="ref-18"><a href="https://elevenlabs.io/docs/eleven-creative/products/music">Eleven Music v2 documentation</a>.</li>
+        <li id="ref-19"><a href="https://elevenlabs.io/pricing/api">ElevenLabs API pricing</a>.</li>
+        <li id="ref-20"><a href="https://elevenlabs.io/music-api-terms">Eleven Music API terms</a>.</li>
+        <li id="ref-21"><a href="https://elevenlabs.io/eleven-music-model-specific-terms">Eleven Music model-specific terms</a>.</li>
+        <li id="ref-22"><a href="https://arxiv.org/abs/2604.09054">AccompGen paper</a>.</li>
+        <li id="ref-23"><a href="https://suno.com/release-notes/introducing-v5-5-voices-custom-models-and-my-taste">Suno v5.5, Voices, and Custom Models</a>.</li>
+        <li id="ref-24"><a href="https://suno.com/blog/studio-2">Suno Studio 2</a> and <a href="https://about.suno.com/terms">Suno terms</a>.</li>
+        <li id="ref-25"><a href="https://github.com/Tencent/SongBench">SongBench</a>.</li>
+        <li id="ref-26"><a href="https://aclanthology.org/2026.eacl-long.168/">AudioJudge bias study</a>.</li>
+        <li id="ref-27"><a href="https://arxiv.org/abs/2607.20253">Token Foundry / Lucky Dolphin paper</a>.</li>
+        <li id="ref-28"><a href="https://www.copyright.gov/ai/Copyright-and-Artificial-Intelligence-Part-2-Copyrightability-Report.pdf">US Copyright Office AI report, Part 2</a>.</li>
+        <li id="ref-29"><a href="https://www.tn.gov/governor/news/2024/3/21/governor-lee-signs-elvis-act-into-law.html">Tennessee ELVIS Act announcement</a>.</li>
+        <li id="ref-30"><a href="https://arxiv.org/abs/2607.11699">Qwen-Music paper</a> and <a href="https://arxiv.org/abs/2607.14749">WanSong paper</a>.</li>
+      </ol>
+    </section>
+
+    <footer>
+      <strong>Bottom line:</strong> preserve VocalRender as a potentially unique vocal instrument; use a replaceable full-song backbone; decide by same-prompt, full-song listening—not demos or vendor leaderboards. This is a technical/product strategy, not legal advice.
+    </footer>
+  </main>
+</body>
+</html>
