@@ -1,6 +1,6 @@
 # Quality review
 
-Review date: 2026-08-16  
+Review date: 2026-08-16<br>
 Artifact: `report.html`
 
 ## Outcome

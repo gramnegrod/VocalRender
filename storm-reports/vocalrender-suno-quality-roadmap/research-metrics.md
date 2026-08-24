@@ -1,6 +1,6 @@
 # Research metrics
 
-Mode: deep  
+Mode: deep<br>
 Run date: 2026-08-16
 
 | Metric | Result |

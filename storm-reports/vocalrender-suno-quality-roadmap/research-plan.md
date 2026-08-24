@@ -1,8 +1,8 @@
 # Deep research plan: VocalRender to a Suno-quality music tool
 
-Date: 2026-08-16  
-Mode: deep  
-Audience: Rodney Franklin, builder and product decision-maker  
+Date: 2026-08-16<br>
+Mode: deep<br>
+Audience: Rodney Franklin, builder and product decision-maker<br>
 Decision: choose the next technical and product architecture for a music-making tool that can approach commercial frontier quality while preserving VocalRender's unusually strong first 2-3 seconds of Amy-like vocal identity.
 
 ## Research question
@@ -123,4 +123,3 @@ Research may synthesize after all eight branches have primary-source coverage, a
 - `report.html`
 - `quality-review.md`
 - `docs/vocalrender-suno-quality-roadmap.html`
-
