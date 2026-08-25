@@ -6,6 +6,7 @@ on:
     paths:
       - "docs/**"
       - "assets/**"
+      - "storm-reports/vocalrender-suno-quality-roadmap/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -34,6 +35,8 @@ jobs:
           mkdir -p _site
           cp -R docs/. _site/
           cp -R assets _site/assets
+          mkdir -p _site/storm-reports
+          cp -R storm-reports/vocalrender-suno-quality-roadmap _site/storm-reports/
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
