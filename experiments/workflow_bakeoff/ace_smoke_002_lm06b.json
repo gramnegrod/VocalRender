@@ -1,0 +1,42 @@
+{
+  "test_id": "ace_smoke_002_lm06b",
+  "purpose": "Test intelligible original vocals with ACE-Step thinking enabled on the RTX 4070.",
+  "created_date": "2026-08-27",
+  "identity_policy": "Original fictional vocalist; no artist imitation and no reference audio.",
+  "hardware": {
+    "gpu_index": 0,
+    "target": "NVIDIA GeForce RTX 4070 12 GB"
+  },
+  "engine": {
+    "name": "ACE-Step 1.5",
+    "model": "acestep-v15-turbo",
+    "language_model": "acestep-5Hz-lm-0.6B",
+    "repo_path": "C:/Users/Rodney Franklin/Development/ACE-Step-1.5",
+    "repo_commit_at_plan_time": "3eb917b9d3080d1d584fb056ca59f3687bcb7ce3",
+    "working_tree_note": "Existing user changes are preserved; the runner records whether the tree is dirty."
+  },
+  "request": {
+    "prompt": "Original late-night retro soul song, intimate low female alto with a textured non-identifiable voice, clear English diction, restrained horn stabs, upright bass, brushed drums, Wurlitzer piano, warm analog tape, spacious but controlled mix.",
+    "lyrics": "[Verse]\nStreetlights fade into the rain\nThe last train hums my name\nI kept the door held by a chain\nNow morning knows my shame\n\n[Chorus]\nLet the blue hour roll\nCarry sparks out of my soul\nI will never borrow another face\nI will sing in my own name and place",
+    "thinking": true,
+    "use_format": true,
+    "use_cot_caption": true,
+    "use_cot_language": true,
+    "use_cot_metas": true,
+    "vocal_language": "en",
+    "audio_format": "wav",
+    "model": "acestep-v15-turbo",
+    "bpm": 72,
+    "key_scale": "D minor",
+    "time_signature": "4",
+    "audio_duration": 30,
+    "inference_steps": 8,
+    "infer_method": "ode",
+    "lm_temperature": 0.85,
+    "lm_cfg_scale": 2.0,
+    "use_random_seed": false,
+    "seed": 424242,
+    "batch_size": 1
+  },
+  "output_name": "ace_smoke_002_lm06b.wav"
+}
