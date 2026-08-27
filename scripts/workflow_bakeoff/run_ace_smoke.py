@@ -146,7 +146,8 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=int, default=1800)
     args = parser.parse_args()
 
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    manifest_bytes = args.manifest.read_bytes()
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
     args.output_dir.mkdir(parents=True, exist_ok=True)
     result_path = args.output_dir / "run-result.json"
 
@@ -156,7 +157,10 @@ def main() -> int:
         "test_id": manifest["test_id"],
         "started_unix": started,
         "manifest": str(args.manifest.resolve()),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "api_base": args.api_base,
+        "identity_policy": manifest.get("identity_policy"),
+        "engine": manifest["engine"],
         "engine_git": git_state(manifest["engine"]["repo_path"]),
         "request": manifest["request"],
     }
